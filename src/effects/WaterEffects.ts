@@ -18,7 +18,7 @@ export class WaterEffects {
 
   // Configurable properties
   splashColor = '#64c8ff' // Default blue-ish
-  splashVolume = 5
+  splashVolume = 0
   rainVolume = 0 // 0..1
 
   constructor() {
