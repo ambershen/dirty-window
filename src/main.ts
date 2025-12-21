@@ -31,6 +31,7 @@ const rainSound = new RainSound()
 let gesturesEnabled = false
 let wipingEnabled = false
 let rainingMode = false
+let darkMode = false
 let lastWipeApply = 0
 let guiInstance: any = null // Keep track of GUI instance to update it
 
@@ -186,6 +187,17 @@ async function bootstrap() {
           }
         } catch (e) { console.warn('Could not update GUI rain slider', e) }
       }
+    },
+    onDarkModeToggle: v => {
+      darkMode = !!v
+      if (darkMode) {
+        frostedGlass.classList.add('dark-night')
+        // Increase wiping difficulty
+        wipeMask.setDifficulty(0.8)
+      } else {
+        frostedGlass.classList.remove('dark-night')
+        wipeMask.setDifficulty(0)
+      }
     }
   })
 
@@ -257,18 +269,38 @@ function loop() {
     }
 
     if (wipingEnabled) {
-      // If raining mode is active, restore fog gradually
-      if (rainingMode && waterEffects.rainVolume > 0) {
-        // Speed proportional to rain density
-        // rainVolume is 0..1
-        // We want a subtle restoration.
-        // Try speed 0.002 to 0.02
-        const restorationSpeed = waterEffects.rainVolume * 0.02
-        wipeMask.restoreFog(restorationSpeed)
-      }
-
       const count = Math.min(2, hand.hands.length)
       let moved = false
+
+      // If raining mode is active, restore fog gradually
+      if (rainingMode) {
+        // Face tracking for "breathing" fog
+        face.update(now)
+        if (face.faces.length > 0) {
+          const f = face.faces[0]
+          // If mouth is round and open (breathing)
+          if (f.isMouthRound && f.mouthOpenness > 0.4) {
+             const cx = f.x * window.innerWidth
+             const cy = f.y * window.innerHeight
+             const r = f.width * window.innerWidth * 1.5 // Breath radius relative to mouth width
+             
+             // Add fog (paint black on mask)
+             wipeMask.addFog(cx, cy, r, 0.3)
+             moved = true // Ensure update
+          }
+        }
+      
+        if (waterEffects.rainVolume > 0) {
+            // Speed proportional to rain density
+            // rainVolume is 0..1
+            // We want a subtle restoration.
+            // Try speed 0.002 to 0.02
+            const restorationSpeed = waterEffects.rainVolume * 0.02
+            wipeMask.restoreFog(restorationSpeed)
+        }
+      }
+
+      // Loop through hands for wiping logic
       for (let i = 0; i < count; i++) {
         const h = hand.hands[i]
         const x = h.x * window.innerWidth
@@ -285,8 +317,13 @@ function loop() {
 
         const speedNorm = Math.min(1, dist / 60)
         const movementBoost = Math.max(speedNorm, h.openness)
-        const alpha = Math.max(0.05, Math.min(0.95, 0.4 + 0.6 * movementBoost))
+        let alpha = Math.max(0.05, Math.min(0.95, 0.4 + 0.6 * movementBoost))
         
+        // Make it harder to wipe in dark mode
+        if (darkMode) {
+            alpha *= 0.3 // Reduce effectiveness significantly
+        }
+
         if (p.x >= 0 && dist < 300) {
           wipeMask.eraseStroke(p.x, p.y, x, y, r, alpha)
         } else {

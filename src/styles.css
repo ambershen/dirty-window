@@ -90,6 +90,12 @@ html, body, #app {
   -webkit-mask-composite: source-over;
 }
 
+#frosted-glass.dark-night {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(var(--blur-amt)) saturate(50%) brightness(0.6);
+  -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(50%) brightness(0.6);
+}
+
 /* Grain / Noise Layer */
 #frosted-glass::before {
   content: "";

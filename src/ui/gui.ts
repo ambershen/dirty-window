@@ -35,6 +35,7 @@ export function setupGUI(opts: {
   onWipeToggle?: (v: boolean) => void;
   onWipeReset?: () => void;
   onRainingModeToggle?: (v: boolean) => void;
+  onDarkModeToggle?: (v: boolean) => void;
   initialWiping?: boolean;
 }) {
   const gui = new GUI({ title: 'Controls' })
@@ -69,6 +70,10 @@ export function setupGUI(opts: {
   
   if (opts.onRainingModeToggle) {
     styleFolder.add({ rainingMode: false }, 'rainingMode').name('Raining Mode').onChange((v: boolean) => opts.onRainingModeToggle!(v))
+  }
+
+  if (opts.onDarkModeToggle) {
+    styleFolder.add({ darkMode: false }, 'darkMode').name('Dark Night Effect').onChange((v: boolean) => opts.onDarkModeToggle!(v))
   }
 
   const f = gui.addFolder('Debug (read-only)')
