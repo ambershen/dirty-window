@@ -34,6 +34,7 @@ export function setupGUI(opts: {
   onWaterChange?: (key: string, value: any) => void;
   onWipeToggle?: (v: boolean) => void;
   onWipeReset?: () => void;
+  onRainingModeToggle?: (v: boolean) => void;
   initialWiping?: boolean;
 }) {
   const gui = new GUI({ title: 'Controls' })
@@ -65,6 +66,10 @@ export function setupGUI(opts: {
   styleFolder.add(styleParams, 'grain', 0, 1).name('Granularity').onChange((v: number) => opts.onStyleChange('--grain-opacity', v))
   styleFolder.add(styleParams, 'dirt', 0, 1).name('Dirtiness').onChange((v: number) => opts.onStyleChange('--dirt-opacity', v))
   styleFolder.add(styleParams, 'rain', 0, 1).name('Rain Drops').onChange((v: number) => opts.onWaterChange!('rain', v))
+  
+  if (opts.onRainingModeToggle) {
+    styleFolder.add({ rainingMode: false }, 'rainingMode').name('Raining Mode').onChange((v: boolean) => opts.onRainingModeToggle!(v))
+  }
 
   const f = gui.addFolder('Debug (read-only)')
   f.add(guiDebug, 'pinch', 0, 1).listen()

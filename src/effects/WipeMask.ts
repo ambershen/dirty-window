@@ -67,6 +67,67 @@ export class WipeMask {
     this.ctx.restore()
   }
 
+  eraseStroke(x0: number, y0: number, x1: number, y1: number, r: number, alpha: number) {
+    const dx = x1 - x0
+    const dy = y1 - y0
+    const dist = Math.hypot(dx, dy)
+    // Step size: smaller means smoother but more expensive. r * 0.25 ensures good overlap.
+    const step = Math.max(2, r * 0.25) 
+    const steps = Math.ceil(dist / step)
+
+    if (steps === 0) {
+      this.eraseBlob(x1, y1, r, alpha)
+      return
+    }
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps
+      const x = x0 + dx * t
+      const y = y0 + dy * t
+      this.eraseBlob(x, y, r, alpha)
+    }
+  }
+
+  restoreFog(speed: number) {
+    this.ctx.save()
+    this.ctx.globalCompositeOperation = 'source-over'
+    // Ensure speed is within a reasonable range for alpha (0..1)
+    // Very small values are needed for gradual restoration (e.g. 0.005)
+    this.ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0.001, Math.min(0.1, speed))})`
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+    this.ctx.restore()
+  }
+
+  addFog(x: number, y: number, r: number, alpha: number) {
+    // Similar to eraseBlob but adds fog (black color)
+    const a = Math.max(0.05, Math.min(0.95, alpha))
+    const n = 12 + Math.floor(Math.random() * 8)
+    const a0 = Math.random() * Math.PI * 2
+    const pts: { x: number; y: number }[] = []
+    for (let i = 0; i < n; i++) {
+      const t = a0 + (i / n) * Math.PI * 2
+      const k = 0.6 + Math.random() * 0.6
+      const rx = r * k
+      const ry = r * k
+      pts.push({ x: x + Math.cos(t) * rx, y: y + Math.sin(t) * ry })
+    }
+    this.ctx.save()
+    this.ctx.globalCompositeOperation = 'source-over'
+    this.ctx.fillStyle = '#000' // Black restores the mask (fog)
+    this.ctx.globalAlpha = a
+    // Soft blur for breath effect
+    ;(this.ctx as any).filter = 'blur(10px)'
+    this.ctx.beginPath()
+    this.ctx.moveTo(pts[0].x, pts[0].y)
+    for (let i = 1; i < pts.length; i++) {
+      this.ctx.lineTo(pts[i].x, pts[i].y)
+    }
+    this.ctx.closePath()
+    this.ctx.fill()
+    ;(this.ctx as any).filter = 'none'
+    this.ctx.restore()
+  }
+
   applyTo(el: HTMLElement) {
     const now = performance.now()
     if (now - this.lastApplyTs < 1000 / this.maxApplyHz) return
@@ -93,46 +154,38 @@ export class WipeMask {
         el.style.maskImage = `url(${url})`
         this.applying = false
         // Defer revocation to avoid races with compositor
-        while (this.urlPool.length > 8) this.deferRevoke(this.urlPool.shift()!)
+        // Increase pool size and delay to prevent flickering
+        while (this.urlPool.length > 12) this.deferRevoke(this.urlPool.shift()!)
       })
     }
-    if (this.canvas.toBlob) {
-      this.canvas.toBlob(b => {
-        if (!b) {
-          const url = this.canvas.toDataURL('image/png')
-          const img = new Image()
-          img.src = url
-          const finalize = () => swapUrl(url)
-          if ((img as any).decode) {
-            img.decode().then(finalize).catch(finalize)
-          } else {
-            img.onload = finalize
-            img.onerror = finalize
-          }
-          return
+    const processBlob = (b: Blob | null) => {
+        let url: string
+        if (b) {
+            url = URL.createObjectURL(b)
+        } else {
+            url = this.canvas.toDataURL('image/png')
         }
-        const url = URL.createObjectURL(b)
+        
+        // Pre-decode the image to prevent flickering
         const img = new Image()
         img.src = url
         const finalize = () => swapUrl(url)
+        
         if ((img as any).decode) {
-          img.decode().then(finalize).catch(finalize)
+            img.decode().then(finalize).catch(() => {
+                // If decode fails, try finalize anyway (might flicker but better than stuck)
+                finalize() 
+            })
         } else {
-          img.onload = finalize
-          img.onerror = finalize
+            img.onload = finalize
+            img.onerror = finalize
         }
-      }, 'image/png')
+    }
+
+    if (this.canvas.toBlob) {
+      this.canvas.toBlob(processBlob, 'image/png')
     } else {
-      const url = this.canvas.toDataURL('image/png')
-      const img = new Image()
-      img.src = url
-      const finalize = () => swapUrl(url)
-      if ((img as any).decode) {
-        img.decode().then(finalize).catch(finalize)
-      } else {
-        img.onload = finalize
-        img.onerror = finalize
-      }
+      processBlob(null)
     }
   }
 
@@ -151,6 +204,6 @@ export class WipeMask {
     if (!url) return
     setTimeout(() => {
       try { URL.revokeObjectURL(url) } catch {}
-    }, 1200)
+    }, 1500)
   }
 }

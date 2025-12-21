@@ -1,4 +1,6 @@
 
+import { WipeMask } from './WipeMask'
+
 function hexToRgb(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   return result ? {
@@ -15,14 +17,16 @@ export class WaterEffects {
   private ripples: Ripple[] = []
   private rainDrops: RainDrop[] = []
   private lastRippleTime = 0
+  private wipeMask: WipeMask | null = null
 
   // Configurable properties
   splashColor = '#64c8ff' // Default blue-ish
   splashVolume = 0
   rainVolume = 0 // 0..1
 
-  constructor() {
+  constructor(wipeMask?: WipeMask) {
     this.canvas = document.createElement('canvas')
+    if (wipeMask) this.wipeMask = wipeMask
     this.canvas.style.position = 'fixed'
     this.canvas.style.top = '0'
     this.canvas.style.left = '0'
@@ -103,6 +107,17 @@ export class WaterEffects {
       const r = this.rainDrops[i]
       r.update()
       r.draw(this.ctx)
+      
+      if (this.wipeMask) {
+        // Clear the mask where the drop is
+        // We use a slightly larger radius for the clearing effect to be visible
+        // Alpha is low to create a "less blurry" effect rather than fully clear instantly,
+        // or we can make it fully clear. User said "less bluring".
+        // eraseBlob takes alpha. 1.0 is fully clear (transparent mask).
+        // Let's try a moderate alpha so it looks like water clearing the fog.
+        this.wipeMask.eraseBlob(r.x, r.y, r.size * 3, 0.2)
+      }
+
       if (r.life <= 0) {
         this.rainDrops.splice(i, 1)
       }
@@ -119,19 +134,34 @@ class RainDrop {
   constructor(x: number, y: number) {
     this.x = x
     this.y = y
-    this.size = Math.random() * 2 + 1
+    this.size = Math.random() * 2 + 2 // Slightly larger
     this.life = 1.0
   }
 
   update() {
     this.life -= 0.005 // Slow fade
-    this.y += 0.5 // Slow trickle down
+    this.y += Math.random() * 2 + 1 // Faster, variable speed
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = `rgba(200, 220, 255, ${this.life * 0.6})`
+    ctx.fillStyle = `rgba(255, 255, 255, ${this.life * 0.4})`
     ctx.beginPath()
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+    // Draw a teardrop shape
+    // Start top center
+    const topY = this.y - this.size * 3
+    ctx.moveTo(this.x, topY)
+    // Curve to bottom right
+    ctx.bezierCurveTo(
+      this.x + this.size, this.y - this.size,
+      this.x + this.size, this.y + this.size,
+      this.x, this.y + this.size
+    )
+    // Curve to top left
+    ctx.bezierCurveTo(
+      this.x - this.size, this.y + this.size,
+      this.x - this.size, this.y - this.size,
+      this.x, topY
+    )
     ctx.fill()
   }
 }

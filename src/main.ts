@@ -1,9 +1,11 @@
 import { ThreeApp } from './three/scene'
 import { HandTracker } from './gestures/hand'
+import { FaceTracker } from './gestures/face'
 import { mapFeaturesToMaterial, mapTiltToRotation } from './gestures/mapping'
 import { setupGUI, guiDebug } from './ui/gui'
 import { WaterEffects } from './effects/WaterEffects'
 import { WipeMask } from './effects/WipeMask'
+import { RainSound } from './audio/SoundManager'
 
 const video = document.getElementById('camera') as HTMLVideoElement
 const banner = document.getElementById('permission-banner') as HTMLDivElement
@@ -21,11 +23,14 @@ const trail: { x: number; y: number; r: number }[] = Array(TRAIL_LENGTH).fill({ 
 
 const app = new ThreeApp()
 const hand = new HandTracker(video)
-const waterEffects = new WaterEffects()
+const face = new FaceTracker(video)
 const wipeMask = new WipeMask(window.innerWidth, window.innerHeight)
+const waterEffects = new WaterEffects(wipeMask)
+const rainSound = new RainSound()
 
 let gesturesEnabled = false
 let wipingEnabled = false
+let rainingMode = false
 let lastWipeApply = 0
 let guiInstance: any = null // Keep track of GUI instance to update it
 
@@ -143,6 +148,10 @@ async function bootstrap() {
         waterEffects.splashVolume = value
       } else if (key === 'rain') {
         waterEffects.rainVolume = value
+        // Update rain sound volume if in raining mode
+        if (rainingMode) {
+          rainSound.setVolume(value)
+        }
       }
     },
     onWipeToggle: v => {
@@ -157,6 +166,26 @@ async function bootstrap() {
     onWipeReset: () => {
       wipeMask.clear()
       if (wipingEnabled) wipeMask.applyTo(frostedGlass)
+    },
+    onRainingModeToggle: v => {
+      rainingMode = !!v
+      // Set a default rain volume if turning on, or 0 if turning off
+      if (rainingMode) {
+        if (waterEffects.rainVolume === 0) waterEffects.rainVolume = 0.5
+      } else {
+        waterEffects.rainVolume = 0
+      }
+      
+      // Update GUI rain slider if possible
+      if (guiInstance) {
+        try {
+          const styleFolder = guiInstance.folders.find((f: any) => f._title === 'Glass Style')
+          if (styleFolder) {
+            const rainCtrl = styleFolder.controllers.find((c: any) => c.property === 'rain')
+            if (rainCtrl) rainCtrl.setValue(waterEffects.rainVolume)
+          }
+        } catch (e) { console.warn('Could not update GUI rain slider', e) }
+      }
     }
   })
 
@@ -228,6 +257,16 @@ function loop() {
     }
 
     if (wipingEnabled) {
+      // If raining mode is active, restore fog gradually
+      if (rainingMode && waterEffects.rainVolume > 0) {
+        // Speed proportional to rain density
+        // rainVolume is 0..1
+        // We want a subtle restoration.
+        // Try speed 0.002 to 0.02
+        const restorationSpeed = waterEffects.rainVolume * 0.02
+        wipeMask.restoreFog(restorationSpeed)
+      }
+
       const count = Math.min(2, hand.hands.length)
       let moved = false
       for (let i = 0; i < count; i++) {
@@ -236,18 +275,37 @@ function loop() {
         const y = h.y * window.innerHeight
         const r = 30 + h.openness * 120
         const p = prevPos[i]
-        const dx = p.x < 0 ? 0 : x - p.x
-        const dy = p.y < 0 ? 0 : y - p.y
-        const dist = Math.hypot(dx, dy)
-        const speedNorm = Math.min(1, dist / 600)
+        
+        let dist = 0
+        if (p.x >= 0 && p.y >= 0) {
+          const dx = x - p.x
+          const dy = y - p.y
+          dist = Math.hypot(dx, dy)
+        }
+
+        const speedNorm = Math.min(1, dist / 60)
         const movementBoost = Math.max(speedNorm, h.openness)
         const alpha = Math.max(0.05, Math.min(0.95, 0.4 + 0.6 * movementBoost))
-        wipeMask.eraseBlob(x, y, r, alpha)
+        
+        if (p.x >= 0 && dist < 300) {
+          wipeMask.eraseStroke(p.x, p.y, x, y, r, alpha)
+        } else {
+          wipeMask.eraseBlob(x, y, r, alpha)
+        }
+        
         prevPos[i] = { x, y }
-        if (dist > 3) moved = true
+        if (dist > 2) moved = true
       }
-      const applyInterval = 120
-      if (moved || now - lastWipeApply > applyInterval) {
+      
+      // Reset previous positions for hands that are no longer tracked
+      for (let i = count; i < 2; i++) {
+        prevPos[i] = { x: -1, y: -1 }
+      }
+
+      const applyInterval = 30
+      // Check if rain is active (volume > 0) to ensure mask updates even if hands don't move
+      const rainActive = waterEffects.rainVolume > 0
+      if (moved || rainActive || now - lastWipeApply > applyInterval) {
         wipeMask.applyTo(frostedGlass)
         lastWipeApply = now
       }

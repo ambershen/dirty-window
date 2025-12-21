@@ -82,8 +82,12 @@ html, body, #app {
     radial-gradient(circle at var(--tx-11) var(--ty-11), transparent 0px, transparent var(--tr-11), black var(--te-11)),
     radial-gradient(circle at var(--x2) var(--y2), transparent 0px, transparent 100px, black 180px);
   
-  mask-composite: intersect;
-  -webkit-mask-composite: source-in;
+  /* Standard syntax - use 'exclude' to subtract the gradient from the mask (if mask image is white) */
+  /* OR 'intersect' if we want to keep only the intersection */
+  /* For wiping effect, usually we want 'add' or 'source-over' if we're painting transparency */
+  /* Let's try to simplify: default composite is add/source-over */
+  mask-composite: add;
+  -webkit-mask-composite: source-over;
 }
 
 /* Grain / Noise Layer */
