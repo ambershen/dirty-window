@@ -146,8 +146,32 @@ export class FogRenderer {
     // Initialize simplex noise
     this.noise = new SimplexNoise()
 
-    document.body.appendChild(this.canvas)
+    // Don't auto-append; let the layer manage DOM attachment
     this.resize()
+  }
+
+  appendTo(parent: HTMLElement) {
+    parent.appendChild(this.canvas)
+  }
+
+  show() {
+    this.canvas.style.display = ''
+  }
+
+  hide() {
+    this.canvas.style.display = 'none'
+  }
+
+  getCanvas(): HTMLCanvasElement {
+    return this.canvas
+  }
+
+  // Gradually restore fog (fog creeps back over cleared areas)
+  restoreFog(speed: number) {
+    if (speed <= 0) return
+    this.maskCtx.globalCompositeOperation = 'source-over'
+    this.maskCtx.fillStyle = `rgba(255, 255, 255, ${speed * 0.008})`
+    this.maskCtx.fillRect(0, 0, this.width, this.height)
   }
 
   resize() {

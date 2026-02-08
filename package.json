@@ -9,9 +9,7 @@
     "preview": "vite preview --port 5173"
   },
   "dependencies": {
-    "three": "^0.160.0",
-    "@mediapipe/tasks-vision": "^0.10.7",
-    "lil-gui": "^0.18.2"
+    "@mediapipe/tasks-vision": "^0.10.7"
   },
   "devDependencies": {
     "typescript": "^5.3.3",

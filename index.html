@@ -3,15 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Glass Effect · Three.js + Hand Gestures</title>
+    <title>Glass Effect · Interactive Layers</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <div id="app">
-      <canvas id="webgl"></canvas>
-      <!-- Frosted glass overlay -->
-      <div id="frosted-glass"></div>
-      
       <video id="camera" playsinline autoplay muted></video>
       <div id="permission-banner" class="banner hidden">
         <div>
@@ -20,20 +16,7 @@
           <button id="request-permission">Allow Camera</button>
         </div>
       </div>
-
-      <!-- Back Button -->
-      <button id="back-button" class="hidden">Back</button>
-
-      <!-- Wipe Mode Popup -->
-      <div id="wipe-popup" class="popup-overlay">
-        <div class="popup-content">
-          <h2>Do you want to wipe the window?</h2>
-          <div class="popup-buttons">
-            <button id="wipe-yes">Yes</button>
-            <button id="wipe-no">No</button>
-          </div>
-        </div>
-      </div>
+      <div id="photo-flash"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

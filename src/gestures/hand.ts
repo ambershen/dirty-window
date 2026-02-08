@@ -2,14 +2,18 @@ import type { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { FilesetResolver as _FilesetResolver, HandLandmarker as _HandLandmarker } from '@mediapipe/tasks-vision'
 
 export type GestureFeatures = {
-  pinch: number // 0..1
-  openness: number // 0..1
-  tiltX: number // radians delta
-  tiltY: number // radians delta
-  x: number // 0..1 (screen space)
-  y: number // 0..1 (screen space)
-  width: number // 0..1
-  height: number // 0..1
+  pinch: number       // 0..1
+  openness: number    // 0..1
+  isPointing: boolean // index finger extended, others curled
+  isFist: boolean     // all fingers curled
+  tiltX: number       // radians delta
+  tiltY: number       // radians delta
+  x: number           // 0..1 (screen space, palm center)
+  y: number           // 0..1 (screen space, palm center)
+  indexTipX: number   // 0..1 (screen space, index fingertip)
+  indexTipY: number   // 0..1 (screen space, index fingertip)
+  width: number       // 0..1
+  height: number      // 0..1
 }
 
 export class HandTracker {
@@ -23,7 +27,7 @@ export class HandTracker {
   private inferCtx: CanvasRenderingContext2D | null = null
 
   // Initialize off-screen so we don't show a "hole" in the center before detection
-  features: GestureFeatures = { pinch: 0, openness: 0.5, tiltX: 0, tiltY: 0, x: -1, y: -1, width: 0, height: 0 }
+  features: GestureFeatures = { pinch: 0, openness: 0.5, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
   hands: GestureFeatures[] = []
 
   constructor(videoEl: HTMLVideoElement) {
@@ -85,7 +89,7 @@ export class HandTracker {
 
 type LM = { x: number; y: number; z: number }
 
-// Compute simple features from 21 hand landmarks
+// Compute features from 21 hand landmarks
 function computeFeatures(lm: LM[]): GestureFeatures {
   const idxTip = lm[8]
   const thbTip = lm[4]
@@ -93,7 +97,10 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const mid = lm[9]
 
   const handScale = dist(wrist, mid)
-  const pinch = 1 - clamp(dist(idxTip, thbTip) / (handScale * 1.2), 0, 1)
+
+  // Pinch: normalized distance between thumb tip and index tip
+  const pinchDist = dist(thbTip, idxTip)
+  const pinch = clamp(1 - (pinchDist / (handScale * 1.5)), 0, 1)
 
   // Openness: average distance of fingertips to palm center
   const tips = [lm[4], lm[8], lm[12], lm[16], lm[20]]
@@ -101,14 +108,27 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const avg = tips.reduce((acc, t) => acc + dist(t, palm), 0) / tips.length
   const openness = clamp(avg / (handScale * 2), 0, 1)
 
+  // isPointing: index extended, middle/ring/pinky curled
+  const indexExtended = dist(lm[8], wrist) > dist(lm[6], wrist)
+  const middleCurled = dist(lm[12], palm) < handScale * 0.8
+  const ringCurled = dist(lm[16], palm) < handScale * 0.8
+  const pinkyCurled = dist(lm[20], palm) < handScale * 0.8
+  const isPointing = indexExtended && middleCurled && ringCurled && pinkyCurled
+
+  // isFist: all fingertips close to palm
+  const isFist = tips.every(t => dist(t, palm) < handScale * 0.8)
+
   // Tilt: use wrist→mid direction as palm normal proxy in screen space
   const dx = (mid.x - wrist.x)
   const dy = (mid.y - wrist.y)
 
-  // Screen space position (using palm centroid)
-  // Mirror x because it's a webcam
+  // Screen space position (using palm centroid), mirrored for webcam
   const x = 1 - palm.x
   const y = palm.y
+
+  // Index fingertip position (mirrored)
+  const indexTipX = 1 - idxTip.x
+  const indexTipY = idxTip.y
 
   // Bounding box for dynamic size
   let minX = 1, maxX = 0, minY = 1, maxY = 0
@@ -121,7 +141,7 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const width = maxX - minX
   const height = maxY - minY
 
-  return { pinch, openness, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, width, height }
+  return { pinch, openness, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
 }
 
 function dist(a: LM, b: LM) { const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z; return Math.sqrt(dx*dx + dy*dy + dz*dz) }
