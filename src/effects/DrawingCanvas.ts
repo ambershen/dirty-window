@@ -14,6 +14,10 @@ export class DrawingCanvas {
     '#00bfff', '#ff4500', '#9370db', '#32cd32'
   ]
   private _colorIndex: number = 0
+  private _eraserMode: boolean = false
+  private undoStack: ImageData[] = []
+  private redoStack: ImageData[] = []
+  private readonly maxUndoLevels = 30
 
   constructor() {
     this.width = window.innerWidth
@@ -61,10 +65,18 @@ export class DrawingCanvas {
   }
 
   clear() {
+    this.undoStack.push(this.ctx.getImageData(0, 0, this.width, this.height))
+    if (this.undoStack.length > this.maxUndoLevels) this.undoStack.shift()
+    this.redoStack.length = 0
     this.ctx.clearRect(0, 0, this.width, this.height)
   }
 
   startDrawing(x: number, y: number) {
+    // Snapshot canvas before new stroke for undo
+    this.undoStack.push(this.ctx.getImageData(0, 0, this.width, this.height))
+    if (this.undoStack.length > this.maxUndoLevels) this.undoStack.shift()
+    this.redoStack.length = 0
+
     this.isDrawing = true
     this.lastX = x
     this.lastY = y
@@ -118,14 +130,47 @@ export class DrawingCanvas {
     this._brushSize = Math.max(5, Math.min(40, size))
   }
 
+  get eraserMode(): boolean { return this._eraserMode }
+  set eraserMode(on: boolean) { this._eraserMode = on }
+
+  toggleEraser(): boolean {
+    this._eraserMode = !this._eraserMode
+    return this._eraserMode
+  }
+
+  undo(): boolean {
+    if (this.undoStack.length === 0) return false
+    this.redoStack.push(this.ctx.getImageData(0, 0, this.width, this.height))
+    const snapshot = this.undoStack.pop()!
+    this.ctx.putImageData(snapshot, 0, 0)
+    return true
+  }
+
+  redo(): boolean {
+    if (this.redoStack.length === 0) return false
+    this.undoStack.push(this.ctx.getImageData(0, 0, this.width, this.height))
+    const snapshot = this.redoStack.pop()!
+    this.ctx.putImageData(snapshot, 0, 0)
+    return true
+  }
+
+  get canUndo(): boolean { return this.undoStack.length > 0 }
+  get canRedo(): boolean { return this.redoStack.length > 0 }
+
   private drawPoint(x: number, y: number) {
     if (!isFinite(x) || !isFinite(y) || x < 0 || y < 0 || x > this.width || y > this.height) return
     this.ctx.save()
-    this.ctx.globalCompositeOperation = 'source-over'
+    this.ctx.globalCompositeOperation = this._eraserMode ? 'destination-out' : 'source-over'
     const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, this._brushSize)
-    gradient.addColorStop(0, this.currentColor)
-    gradient.addColorStop(0.7, this.currentColor)
-    gradient.addColorStop(1, this.currentColor + '00')
+    if (this._eraserMode) {
+      gradient.addColorStop(0, 'rgba(0,0,0,1)')
+      gradient.addColorStop(0.7, 'rgba(0,0,0,1)')
+      gradient.addColorStop(1, 'rgba(0,0,0,0)')
+    } else {
+      gradient.addColorStop(0, this.currentColor)
+      gradient.addColorStop(0.7, this.currentColor)
+      gradient.addColorStop(1, this.currentColor + '00')
+    }
     this.ctx.fillStyle = gradient
     this.ctx.beginPath()
     this.ctx.arc(x, y, this._brushSize, 0, Math.PI * 2)

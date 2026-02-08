@@ -63,6 +63,24 @@ export class TuiPanel {
     // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement) return
+
+      // Undo: Ctrl+Z / Cmd+Z
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (deps.state.doodling.enabled && deps.doodle.drawingCanvas.undo()) {
+          this.setStatus('UNDO')
+        }
+        return
+      }
+      // Redo: Ctrl+Shift+Z / Cmd+Shift+Z
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        if (deps.state.doodling.enabled && deps.doodle.drawingCanvas.redo()) {
+          this.setStatus('REDO')
+        }
+        return
+      }
+
       if (e.key === 'h' || e.key === 'H') {
         if (this.visible) this.hide(); else this.show()
       }
@@ -71,6 +89,15 @@ export class TuiPanel {
       if (e.key === '2') this.toggleLayer('weather')
       if (e.key === '3') this.toggleLayer('doodling')
       if (e.key === '4') this.toggleLayer('photoBooth')
+
+      // Eraser toggle: E key
+      if (e.key === 'e' || e.key === 'E') {
+        if (deps.state.doodling.enabled) {
+          const on = deps.doodle.drawingCanvas.toggleEraser()
+          deps.state.update('doodling', { eraserMode: on })
+          this.setStatus(on ? 'ERASER ON' : 'ERASER OFF')
+        }
+      }
     })
 
     // Listen for state changes
@@ -214,6 +241,27 @@ export class TuiPanel {
         canvas.brushSize = v
       }))
 
+      // Eraser toggle
+      const eraserRow = document.createElement('div')
+      eraserRow.className = 'tui-control-row'
+      const eraserLabel = document.createElement('span')
+      eraserLabel.className = 'tui-label'
+      eraserLabel.textContent = 'ERASER'
+      const eraserBtn = document.createElement('button')
+      eraserBtn.className = 'tui-sub-toggle'
+      eraserBtn.dataset.active = 'false'
+      eraserBtn.textContent = '[ ]'
+      eraserBtn.onclick = () => {
+        const on = canvas.toggleEraser()
+        eraserBtn.dataset.active = String(on)
+        eraserBtn.textContent = on ? '[X]' : '[ ]'
+        state.update('doodling', { eraserMode: on })
+        this.setStatus(on ? 'ERASER ON' : 'ERASER OFF')
+      }
+      eraserRow.appendChild(eraserLabel)
+      eraserRow.appendChild(eraserBtn)
+      controls.appendChild(eraserRow)
+
       // Color display + next button
       const colorRow = document.createElement('div')
       colorRow.className = 'tui-control-row'
@@ -249,6 +297,27 @@ export class TuiPanel {
       colorRow.appendChild(nextBtn)
       controls.appendChild(colorRow)
 
+      // Undo / Redo row
+      const undoRow = document.createElement('div')
+      undoRow.className = 'tui-btn-row'
+      const undoBtn = document.createElement('button')
+      undoBtn.className = 'tui-btn'
+      undoBtn.textContent = '[ UNDO ]'
+      undoBtn.onclick = () => {
+        if (canvas.undo()) this.setStatus('UNDO')
+        else this.setStatus('NOTHING TO UNDO')
+      }
+      const redoBtn = document.createElement('button')
+      redoBtn.className = 'tui-btn'
+      redoBtn.textContent = '[ REDO ]'
+      redoBtn.onclick = () => {
+        if (canvas.redo()) this.setStatus('REDO')
+        else this.setStatus('NOTHING TO REDO')
+      }
+      undoRow.appendChild(undoBtn)
+      undoRow.appendChild(redoBtn)
+      controls.appendChild(undoRow)
+
       // Clear button
       const clearRow = document.createElement('div')
       clearRow.className = 'tui-control-row'
@@ -261,6 +330,26 @@ export class TuiPanel {
       }
       clearRow.appendChild(clearBtn)
       controls.appendChild(clearRow)
+
+      // Sync TUI controls when state changes from gestures
+      const brushSlider = controls.querySelector('.tui-slider') as HTMLInputElement | null
+      const brushValue = controls.querySelector('.tui-value') as HTMLSpanElement | null
+      state.onChange((key) => {
+        if (key === 'doodling') {
+          if (brushSlider && brushValue) {
+            brushSlider.value = String(state.doodling.brushSize)
+            brushValue.textContent = String(state.doodling.brushSize)
+          }
+          canvas.setColorIndex(state.doodling.colorIndex)
+          colorDot.style.backgroundColor = canvas.getColor()
+          colorDot.style.color = canvas.getColor()
+          colorName.textContent = canvas.getColorName()
+          canvas.brushSize = state.doodling.brushSize
+          canvas.eraserMode = state.doodling.eraserMode
+          eraserBtn.dataset.active = String(state.doodling.eraserMode)
+          eraserBtn.textContent = state.doodling.eraserMode ? '[X]' : '[ ]'
+        }
+      })
     })
   }
 
@@ -458,7 +547,7 @@ export class TuiPanel {
     footer.className = 'tui-footer'
 
     const left = document.createElement('span')
-    left.textContent = '[H] Panel  [P] Move'
+    left.textContent = '[H] Panel  [P] Move  [E] Eraser'
     const right = document.createElement('span')
     right.textContent = '[1-4] Layers'
 

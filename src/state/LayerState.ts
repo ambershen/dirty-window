@@ -17,6 +17,7 @@ export interface DoodlingConfig {
   enabled: boolean
   brushSize: number     // 5..40
   colorIndex: number    // index into color palette
+  eraserMode: boolean
 }
 
 export interface PhotoBoothConfig {
@@ -55,6 +56,7 @@ export class LayerState {
     enabled: false,
     brushSize: 15,
     colorIndex: 0,
+    eraserMode: false,
   }
 
   readonly photoBooth: PhotoBoothConfig = {

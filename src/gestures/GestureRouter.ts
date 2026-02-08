@@ -25,6 +25,20 @@ export class GestureRouter {
           claimedByDoodle.add(i)
         }
       }
+      // Pinch gesture on the non-drawing hand: brush size control
+      for (let i = 0; i < hands.length; i++) {
+        if (claimedByDoodle.has(i)) continue
+        const h = hands[i]
+
+        // Pinch-to-resize: map pinch 0.2..1.0 → brush size 5..40
+        if (h.pinch > 0.2 && !h.isPointing && !h.isFist) {
+          const t = (h.pinch - 0.2) / 0.8
+          const size = Math.round(5 + t * 35)
+          this.doodle.drawingCanvas.brushSize = size
+          this.state.update('doodling', { brushSize: size })
+        }
+      }
+
       // If no hand is pointing, stop the stroke
       if (claimedByDoodle.size === 0) {
         this.doodle.stopStroke()

@@ -1,5 +1,6 @@
 import type { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { FilesetResolver as _FilesetResolver, HandLandmarker as _HandLandmarker } from '@mediapipe/tasks-vision'
+import { LandmarkSmoother } from './LandmarkSmoother'
 
 export type GestureFeatures = {
   pinch: number       // 0..1
@@ -25,6 +26,7 @@ export class HandTracker {
   private readonly modelUrl = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
   private inferCanvas: HTMLCanvasElement | null = null
   private inferCtx: CanvasRenderingContext2D | null = null
+  private smoother = new LandmarkSmoother()
 
   // Initialize off-screen so we don't show a "hole" in the center before detection
   features: GestureFeatures = { pinch: 0, openness: 0.5, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
@@ -78,10 +80,16 @@ export class HandTracker {
     const result = this.landmarker.detectForVideo(this.inferCanvas as unknown as HTMLCanvasElement, now)
     if (!result || !result.landmarks || result.landmarks.length === 0) {
       this.hands = []
+      this.smoother.clearAll()
       return
     }
-    
-    this.hands = result.landmarks.map(lm => computeFeatures(lm))
+
+    const tSeconds = now / 1000
+    this.hands = result.landmarks.map((lm, i) => {
+      const raw = computeFeatures(lm)
+      const smoothed = this.smoother.smooth(i, raw.indexTipX, raw.indexTipY, raw.x, raw.y, tSeconds)
+      return { ...raw, indexTipX: smoothed.indexTipX, indexTipY: smoothed.indexTipY, x: smoothed.x, y: smoothed.y }
+    })
     // Keep legacy support
     this.features = this.hands[0]
   }
