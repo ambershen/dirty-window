@@ -29,7 +29,7 @@ export class DrawingCanvas {
     this.canvas.style.width = '100%'
     this.canvas.style.height = '100%'
     this.canvas.style.pointerEvents = 'none'
-    this.canvas.style.zIndex = '5'
+    this.canvas.style.zIndex = '12'
     this.ctx = this.canvas.getContext('2d')!
 
     window.addEventListener('resize', () => this.resize())

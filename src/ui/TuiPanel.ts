@@ -2,12 +2,14 @@ import type { LayerState, LayerKey } from '../state/LayerState'
 import type { PhotoBoothLayer } from '../layers/PhotoBoothLayer'
 import type { WeatherLayer } from '../layers/WeatherLayer'
 import type { DoodleLayer } from '../layers/DoodleLayer'
+import type { FogRenderer } from '../effects/FogRenderer'
 
 interface TuiDeps {
   state: LayerState
   photoBooth: PhotoBoothLayer
   weather: WeatherLayer
   doodle: DoodleLayer
+  fogRenderer: FogRenderer
   onWipeReset: () => void
 }
 
@@ -188,6 +190,24 @@ export class TuiPanel {
     const canvas = doodle.drawingCanvas
 
     return this.buildLayerSection('doodling', 'DOODLING', '3', (controls) => {
+      // Glass Dirtiness — controls fog opacity while doodling
+      controls.appendChild(this.sliderRow('DIRTINESS', 0, 1, 0.01, state.windowTouch.difficulty, (v) => {
+        state.update('windowTouch', { difficulty: v })
+      }))
+
+      // Reset fog button
+      const resetRow = document.createElement('div')
+      resetRow.className = 'tui-control-row'
+      const resetBtn = document.createElement('button')
+      resetBtn.className = 'tui-btn'
+      resetBtn.textContent = '[ RESET FOG ]'
+      resetBtn.onclick = () => {
+        this.deps.fogRenderer.resetMask()
+        this.setStatus('FOG RESET')
+      }
+      resetRow.appendChild(resetBtn)
+      controls.appendChild(resetRow)
+
       // Brush Size
       controls.appendChild(this.sliderRow('BRUSH', 5, 40, 1, state.doodling.brushSize, (v) => {
         state.update('doodling', { brushSize: v })

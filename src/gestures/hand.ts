@@ -108,12 +108,13 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const avg = tips.reduce((acc, t) => acc + dist(t, palm), 0) / tips.length
   const openness = clamp(avg / (handScale * 2), 0, 1)
 
-  // isPointing: index extended, middle/ring/pinky curled
+  // isPointing: only index finger extended, all others curled
   const indexExtended = dist(lm[8], wrist) > dist(lm[6], wrist)
+  const thumbCurled = dist(lm[4], palm) < handScale * 1.0
   const middleCurled = dist(lm[12], palm) < handScale * 0.8
   const ringCurled = dist(lm[16], palm) < handScale * 0.8
   const pinkyCurled = dist(lm[20], palm) < handScale * 0.8
-  const isPointing = indexExtended && middleCurled && ringCurled && pinkyCurled
+  const isPointing = indexExtended && thumbCurled && middleCurled && ringCurled && pinkyCurled && openness < 0.55
 
   // isFist: all fingertips close to palm
   const isFist = tips.every(t => dist(t, palm) < handScale * 0.8)

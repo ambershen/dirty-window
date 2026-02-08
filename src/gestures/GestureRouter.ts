@@ -20,7 +20,7 @@ export class GestureRouter {
     if (this.state.doodling.enabled) {
       for (let i = 0; i < hands.length; i++) {
         const h = hands[i]
-        if (h.isPointing) {
+        if (h.isPointing && !h.isFist && h.openness < 0.55) {
           this.doodle.handlePointing(h.indexTipX, h.indexTipY)
           claimedByDoodle.add(i)
         }

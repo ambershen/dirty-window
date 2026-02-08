@@ -63,7 +63,8 @@ export class WindowTouchLayer implements Layer {
   }
 
   update(now: number, hands: GestureFeatures[]) {
-    if (!this.state.windowTouch.enabled) return
+    // Render fog when windowTouch is enabled OR doodling is enabled (frosted glass backdrop)
+    if (!this.state.windowTouch.enabled && !this.state.doodling.enabled) return
     this.fogRenderer.render(this.video)
     this.fogRenderer.restoreFog(this.state.windowTouch.difficulty)
   }

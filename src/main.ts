@@ -19,22 +19,36 @@ const windowTouch = new WindowTouchLayer(video, state)
 const weather = new WeatherLayer(video, state, windowTouch.fogRenderer)
 const doodle = new DoodleLayer(state)
 const photoBooth = new PhotoBoothLayer(video, state, [
-  () => doodle.getCanvas(),
   () => windowTouch.getCanvas(),
+  () => doodle.getCanvas(),
   () => weather.getCanvas(),
 ])
 
 // Gesture routing
 const router = new GestureRouter(state, windowTouch, weather, doodle)
 
+// Sync fog visibility: show fog when windowTouch OR doodling is active
+function syncFogVisibility() {
+  const needsFog = state.windowTouch.enabled || state.doodling.enabled
+  if (needsFog) {
+    windowTouch.fogRenderer.show()
+  } else {
+    windowTouch.fogRenderer.hide()
+  }
+}
+
 // Enable/disable layers when state changes
 state.onChange((key, config) => {
   if (key === 'windowTouch') {
-    config.enabled ? windowTouch.enable() : windowTouch.disable()
+    // Don't hide fog directly — let syncFogVisibility handle it
+    if (config.enabled) windowTouch.enable()
+    else if (!state.doodling.enabled) windowTouch.disable()
+    syncFogVisibility()
   } else if (key === 'weather') {
     config.enabled ? weather.enable() : weather.disable()
   } else if (key === 'doodling') {
     config.enabled ? doodle.enable() : doodle.disable()
+    syncFogVisibility()
   } else if (key === 'photoBooth') {
     config.enabled ? photoBooth.enable() : photoBooth.disable()
   }
@@ -46,6 +60,7 @@ const tui = new TuiPanel({
   photoBooth,
   weather,
   doodle,
+  fogRenderer: windowTouch.fogRenderer,
   onWipeReset: () => windowTouch.fogRenderer.resetMask(),
 })
 
