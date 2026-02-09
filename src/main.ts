@@ -1,3 +1,4 @@
+import { inject } from '@vercel/analytics'
 import { HandTracker } from './gestures/hand'
 import { GestureRouter } from './gestures/GestureRouter'
 import { LayerState } from './state/LayerState'
@@ -115,4 +116,5 @@ function loop() {
   requestAnimationFrame(loop)
 }
 
+inject()
 bootstrap()
