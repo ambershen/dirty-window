@@ -3,20 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Glass Effect · Interactive Layers</title>
+    <title>Interactive Photobooth</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <div id="app">
-      <video id="camera" playsinline autoplay muted></video>
-      <div id="permission-banner" class="banner hidden">
-        <div>
-          <strong>Camera access needed</strong>
-          <p>Allow camera to enable hand-gesture effects.</p>
-          <button id="request-permission">Allow Camera</button>
-        </div>
-      </div>
-      <div id="photo-flash"></div>
+      <p role="status" style="padding:32px;color:#d9c6a4">Loading camera canvas…</p>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
