@@ -8,7 +8,7 @@ uniform float time;
 uniform float aspect;
 uniform vec3 audio;
 uniform vec4 touches[8];
-uniform vec4 currents[8];
+uniform vec4 currents[16];
 uniform vec4 vortex;
 uniform vec4 squeeze;
 uniform vec2 squeezeAxis;
@@ -27,7 +27,7 @@ float heightAt(vec2 p) {
     float envelope=exp(-pow((r-age*.24)*16.0,2.0))*exp(-age*.9);
     h += sin(r*85.0-age*20.0)*envelope*touches[i].w;
   }
-  for(int i=0;i<8;i++) {
+  for(int i=0;i<16;i++) {
     vec2 d=(p-currents[i].xy)*vec2(aspect,1.0);
     vec2 velocity=currents[i].zw*vec2(aspect,1.0);
     float speed=length(velocity);
@@ -88,7 +88,10 @@ export class WaterSurface {
   private touches = new Float32Array(32)
   private nextTouch = 0
   private lastTouch = -Infinity
-  private currents = new Float32Array(32)
+  private currents = new Float32Array(64)
+  private wakeSlot=8
+  private wakeTimes=new Map<number,number>()
+  private touchPositions=new Map<number,{x:number;y:number}>()
   private vortex = new Float32Array([.5,.5,0,.15])
   private contactSlots = new Map<number,number>()
   private squeeze = new Float32Array([.5,.5,0,.15])
@@ -129,10 +132,13 @@ export class WaterSurface {
     const scale=Math.min(1,1100/Math.max(width,height))
     this.canvas.width=Math.round(width*scale);this.canvas.height=Math.round(height*scale)
   }
-  reset(){this.vortexPhase=0;this.rippleTimes.clear();this.squeeze[2]=0;this.squeezeVelocity=0;this.currents.fill(0);this.vortex[2]=0;this.contactSlots.clear();this.lastTouch=-Infinity;this.touches.fill(0);for(let i=0;i<8;i++)this.touches[i*4+2]=-10000}
+  reset(){this.wakeTimes.clear();this.touchPositions.clear();this.wakeSlot=8;this.vortexPhase=0;this.rippleTimes.clear();this.squeeze[2]=0;this.squeezeVelocity=0;this.currents.fill(0);this.vortex[2]=0;this.contactSlots.clear();this.lastTouch=-Infinity;this.touches.fill(0);for(let i=0;i<8;i++)this.touches[i*4+2]=-10000}
   touch(x:number,y:number,now:number,strength=.65,id=-1) {
     const last=id===-1?this.lastTouch:(this.rippleTimes.get(id)??-Infinity)
     if(now-last<90)return
+    const previous=this.touchPositions.get(id)
+    if(previous&&Math.hypot((x-previous.x)*this.canvas.width/this.canvas.height,y-previous.y)<.012)return
+    this.touchPositions.set(id,{x,y})
     if(id===-1)this.lastTouch=now;else this.rippleTimes.set(id,now)
     this.touches.set([x,1-y,now/1000,Math.max(.06,Math.min(.7,strength))],this.nextTouch*4)
     this.nextTouch=(this.nextTouch+1)%8
@@ -145,9 +151,18 @@ export class WaterSurface {
       for(let i=0;i<8&&occupied.has(slot);i++)slot=(slot+1)%8
       this.contactSlots.set(id,slot)
     }
-    this.currents.set([x,1-y,vx,-vy],slot*4)
+    const k=slot*4,now=performance.now(),oldX=this.currents[k+2],oldY=-this.currents[k+3]
+    const speed=Math.hypot(vx,vy),oldSpeed=Math.hypot(oldX,oldY)
+    if(oldSpeed>.02&&now-(this.wakeTimes.get(id)??-Infinity)>65){
+      this.currents.set([this.currents[k],this.currents[k+1],oldX*.45,-oldY*.45],this.wakeSlot*4)
+      this.wakeSlot=8+(this.wakeSlot-7)%8;this.wakeTimes.set(id,now)
+      const turn=(oldX*vy-oldY*vx)/(oldSpeed*speed+.001)
+      if(Math.abs(turn)>.08&&speed>.06)this.stir(x,y,turn*.025,.12)
+    }
+    const limit=Math.min(1,2/Math.max(.001,speed))
+    this.currents.set([x,1-y,vx*limit,-vy*limit],k)
   }
-  release(id:number){this.contactSlots.delete(id);this.rippleTimes.delete(id)}
+  release(id:number){this.contactSlots.delete(id);this.rippleTimes.delete(id);this.touchPositions.delete(id);this.wakeTimes.delete(id)}
   stir(x:number,y:number,rotation:number,radius:number) {
     this.vortex[0]=x;this.vortex[1]=1-y
     this.vortex[2]=Math.max(-2,Math.min(2,this.vortex[2]-rotation*5))
@@ -160,13 +175,15 @@ export class WaterSurface {
   }
   render(source:HTMLCanvasElement,now:number,audio:WaterAudio,hasCamera=true) {
     const dt=Math.min(.05,Math.max(0,(now-this.previousFrame)/1000));this.previousFrame=now
-    for(let i=0;i<8;i++){
+    const active=new Set(this.contactSlots.values())
+    for(let i=0;i<16;i++){
       const k=i*4
-      if(![...this.contactSlots.values()].includes(i)){
+      if(!active.has(i)){
         this.currents[k]+=this.currents[k+2]*dt*.28
         this.currents[k+1]+=this.currents[k+3]*dt*.28
       }
-      this.currents[k+2]*=Math.exp(-dt*1.4);this.currents[k+3]*=Math.exp(-dt*1.4)
+      const damping=active.has(i)?1.4:.85
+      this.currents[k+2]*=Math.exp(-dt*damping);this.currents[k+3]*=Math.exp(-dt*damping)
     }
     this.vortexPhase+=this.vortex[2]*dt*3
     this.vortex[2]*=Math.exp(-dt*.8)

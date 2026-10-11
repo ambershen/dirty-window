@@ -323,7 +323,7 @@ setMode('water')
 if (matchMedia('(pointer:coarse)').matches || new URLSearchParams(location.search).get('background') === 'pool') {
   const initialEpoch=sourceEpoch
   const pool=new Image()
-  pool.src='/images/swimming-pool.jpg'
+  pool.src='/images/water-sunlight.png'
   void pool.decode().then(()=>{
     if(sourceEpoch!==initialEpoch || cameraOn || photo)return
     const base=document.createElement('canvas')

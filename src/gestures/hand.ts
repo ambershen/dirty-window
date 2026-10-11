@@ -5,7 +5,9 @@ import { LandmarkSmoother } from './LandmarkSmoother'
 export type GestureFeatures = {
   pinch: number       // 0..1
   openness: number    // 0..1
+  isIndexExtended: boolean
   isPointing: boolean // index finger extended, others curled
+  isOpenPalm?: boolean // all five fingers spread
   isFist: boolean     // all fingers curled
   tiltX: number       // radians delta
   tiltY: number       // radians delta
@@ -19,6 +21,7 @@ export type GestureFeatures = {
 
 export class HandTracker {
   cameraError = ''
+  resultTime = 0
   private video: HTMLVideoElement
   private landmarker: HandLandmarker | null = null
   private lastTs = 0
@@ -32,7 +35,7 @@ export class HandTracker {
   private smoother: LandmarkSmoother
 
   // Initialize off-screen so we don't show a "hole" in the center before detection
-  features: GestureFeatures = { pinch: 0, openness: 0.5, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
+  features: GestureFeatures = { pinch: 0, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
   hands: GestureFeatures[] = []
 
   constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string } = {}) {
@@ -103,6 +106,12 @@ export class HandTracker {
     })
   }
 
+  dispose() {
+    (this.video.srcObject as MediaStream|null)?.getTracks().forEach(track=>track.stop())
+    this.video.srcObject=null
+    this.landmarker?.close();this.landmarker=null;this.hands=[];this.smoother.clearAll()
+  }
+
   update(now: number) {
     // Decimate inference to maxHz
     if (!this.landmarker || !this.video.videoWidth || !this.inferCtx || !this.inferCanvas) return
@@ -114,6 +123,7 @@ export class HandTracker {
     // Draw downscaled frame
     this.inferCtx.drawImage(this.video, 0, 0, this.inferCanvas.width, this.inferCanvas.height)
     const result = this.landmarker.detectForVideo(this.inferCanvas as unknown as HTMLCanvasElement, now)
+    this.resultTime=now
     if (!result || !result.landmarks || result.landmarks.length === 0) {
       this.hands = []
       this.smoother.clearAll()
@@ -170,6 +180,14 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   // isFist: all fingertips close to palm
   const isFist = tips.every(t => dist(t, palm) < handScale * 0.8)
 
+  // Palm wiping must tolerate a relaxed thumb and a slightly angled hand.
+  // Pinch already measures thumb separation; requiring the thumb to be a full
+  // palm-length from the centre rejected ordinary open hands.
+  const isOpenPalm = !isFist && pinch < .62 &&
+    [[8,6],[12,10],[16,14],[20,18]].every(([tip,joint]) =>
+      dist(lm[tip],wrist)>dist(lm[joint],wrist)*1.02 &&
+      dist(lm[tip],palm)>handScale*.65)
+
   // Tilt: use wrist→mid direction as palm normal proxy in screen space
   const dx = (mid.x - wrist.x)
   const dy = (mid.y - wrist.y)
@@ -193,7 +211,7 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const width = maxX - minX
   const height = maxY - minY
 
-  return { pinch, openness, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
+  return { pinch, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
 }
 
 function dist(a: LM, b: LM) { const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z; return Math.sqrt(dx*dx + dy*dy + dz*dz) }

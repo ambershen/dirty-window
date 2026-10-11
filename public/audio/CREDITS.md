@@ -17,3 +17,10 @@ The app plays short excerpts at original speed and pitch, with volume envelopes 
   Download: https://cdn.freesound.org/previews/524/524511_6605732-hq.mp3
 
 These are outdoor-water stand-ins, not recordings of a fingertip entering a pond. Entry uses a quiet pond impact; release uses its settling tail; motion uses low-level lake excerpts. Playback stays at original speed and pitch, with fades and subtle panning. The earlier bathtub recording is no longer used.
+
+## Ice interaction
+- ice-crack.mp3: Joseph SARDIN, Cracking ice #3, real ice crushed in studio; CC0. https://bigsoundbank.com/cracking-ice-3-s2207.html
+- ice-rub.mp3: Joseph SARDIN, Defrost #1, windshield frost rubbed by hand; CC0. https://bigsoundbank.com/defrost-1-s2219.html
+Playback uses short enveloped excerpts; rubbing is low-pass filtered at low volume.
+
+- ice-crack-soft.mp3: Joseph SARDIN, Cracking ice #1, CC0. https://bigsoundbank.com/glace-qui-craque-1-s2205.html
