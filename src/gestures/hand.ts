@@ -30,6 +30,8 @@ export class HandTracker {
   private readonly numHands: number
   private readonly wasmPath: string
   private readonly modelUrl: string
+  private readonly inferenceWidth: number
+  private readonly cameraDeviceId?: string
   private inferCanvas: HTMLCanvasElement | null = null
   private inferCtx: CanvasRenderingContext2D | null = null
   private smoother: LandmarkSmoother
@@ -38,7 +40,9 @@ export class HandTracker {
   features: GestureFeatures = { pinch: 0, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
   hands: GestureFeatures[] = []
 
-  constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string } = {}) {
+  constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string; inferenceWidth?: number; cameraDeviceId?: string } = {}) {
+    this.cameraDeviceId = options.cameraDeviceId
+    this.inferenceWidth = options.inferenceWidth ?? 320
     this.wasmPath = options.wasmPath ?? 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
     this.modelUrl = options.modelUrl ?? 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
     this.video = videoEl
@@ -55,6 +59,7 @@ export class HandTracker {
       this.cameraError = ''
       const initialize = async () => {
       const acquired = await navigator.mediaDevices.getUserMedia({ video: {
+        ...(this.cameraDeviceId ? { deviceId: { exact: this.cameraDeviceId } } : {}),
         facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 },
         frameRate: { ideal: this.maxHz }
       }, audio: false })
@@ -68,7 +73,7 @@ export class HandTracker {
       this.lastVideoTime = -1
       this.smoother.clearAll()
       // Prepare downscaled canvas for inference
-      const w = Math.max(160, Math.min(320, this.video.videoWidth))
+      const w = Math.max(160, Math.min(this.inferenceWidth, this.video.videoWidth))
       const h = Math.round(w * (this.video.videoHeight / this.video.videoWidth || 3/4))
       this.inferCanvas = document.createElement('canvas')
       this.inferCanvas.width = w

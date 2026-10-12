@@ -2,7 +2,7 @@ import './elements.css'
 
 document.title = 'States of Water'
 document.getElementById('app')!.innerHTML = `
-<main class="elements" aria-label="States of water">
+<main class="elements" aria-label="Interactive nature studies">
   <header class="elements-heading"><span class="edition">AN INTERACTIVE NATURE STUDY</span><h1>States of <em>Water</em></h1></header>
   <div class="elements-landscape">
     <a class="element element-water" href="/?mode=water&background=pool" aria-label="Explore Water">
@@ -18,6 +18,14 @@ document.getElementById('app')!.innerHTML = `
     <a class="element element-steam" href="/?mode=steam" aria-label="Explore Steam">
       <div class="material steam-material" aria-hidden="true"><i></i><i></i><i></i></div>
       <span class="phase">03 / VAPOR</span><span class="element-label"><span>Steam</span><span class="enter" aria-hidden="true">↗</span></span>
+    </a>
+    <a class="element element-sand" href="/?mode=sand" aria-label="Explore Sand">
+      <div class="material sand-material" aria-hidden="true"><svg width="100%" height="100%"><filter id="sand-grain"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#sand-grain)" opacity=".23"/></svg></div>
+      <span class="phase">04 / GRAINS</span><span class="element-label"><span>Sand</span><span class="enter" aria-hidden="true">↗</span></span>
+    </a>
+    <a class="element element-snow" href="/?mode=snow" aria-label="Explore Snow">
+      <div class="material snow-material" aria-hidden="true"><i></i><i></i><i></i></div>
+      <span class="phase">05 / POWDER</span><span class="element-label"><span>Snow</span><span class="enter" aria-hidden="true">↗</span></span>
     </a>
   </div>
 </main>`

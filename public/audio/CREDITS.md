@@ -24,3 +24,12 @@ These are outdoor-water stand-ins, not recordings of a fingertip entering a pond
 Playback uses short enveloped excerpts; rubbing is low-pass filtered at low volume.
 
 - ice-crack-soft.mp3: Joseph SARDIN, Cracking ice #1, CC0. https://bigsoundbank.com/glace-qui-craque-1-s2205.html
+
+## Sand interaction
+
+- `sand-pour.mp3`: **sand pour on sand FF662.aif**, martinimeniscus / Florentine Films SFX, September 11, 2013.
+- Source: https://freesound.org/people/martinimeniscus/sounds/199332/
+- License: CC0, https://creativecommons.org/publicdomain/zero/1.0/
+- Download: https://cdn.freesound.org/previews/199/199332_2320755-hq.mp3
+
+A real recording of sand pouring onto sand, used as a granular movement stand-in. Playback is filtered and enveloped by contact speed and area, fades when movement stops, and supports mute. It is not a recording of this particular hand interaction or the Sahara.
