@@ -95,7 +95,9 @@ canvas.onpointerdown = e => {
   contact(e.pointerId, e.clientX, e.clientY, broad ? 43 : 13, e.pointerType === 'pen' ? e.pressure : 0)
 }
 canvas.onpointermove = e => { if (contacts.has(e.pointerId)) contact(e.pointerId, e.clientX, e.clientY, broad ? 43 : 13, e.pointerType === 'pen' ? e.pressure : 0) }
-canvas.onpointerup = canvas.onpointercancel = canvas.onlostpointercapture = e => release(e.pointerId)
+// A touch pointerdown is not a user activation on mobile; pointerup is, so retry the unlock there.
+canvas.onpointerup = e => { void unlockSound(); release(e.pointerId) }
+canvas.onpointercancel = canvas.onlostpointercapture = e => release(e.pointerId)
 const brush = document.getElementById('sand-brush') as HTMLButtonElement
 brush.onclick = () => {
   broad = !broad; releaseAll(); brush.setAttribute('aria-pressed', String(broad))

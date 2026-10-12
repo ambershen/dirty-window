@@ -8,9 +8,13 @@ export class SandSound {
   private pan: StereoPannerNode | null = null
   enabled = true
   async unlock() {
+    // Like IceSound/WaterSoundscape: play through the iOS ring/silent switch, and start a silent buffer inside the gesture.
+    try { const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession; if (session) session.type = 'playback' } catch { /* Older browsers use their default session. */ }
     if (!this.context) this.context = new AudioContext()
     const context = this.context
     const resumed = context.resume()
+    const silent = context.createBufferSource()
+    silent.buffer = context.createBuffer(1, 1, context.sampleRate); silent.connect(context.destination); silent.start(); silent.onended = () => silent.disconnect()
     if (!this.buffer && !this.loading) this.loading = fetch(`${import.meta.env.BASE_URL}audio/sand-pour.mp3`).then(async response => {
       if (!response.ok) throw Error('Sand recording could not load')
       const recording = await context.decodeAudioData(await response.arrayBuffer())
