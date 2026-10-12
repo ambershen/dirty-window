@@ -24,6 +24,14 @@ export class SandSound {
           ? input[start + length + i] * (1 - i / fade) + input[start + i] * (i / fade)
           : input[start + i]
       }
+      // The source pour sits near -42 dBFS; raise it to a usable level and soft-limit the rare loud grains.
+      let sum = 0
+      for (let channel = 0; channel < loop.numberOfChannels; channel++) for (const x of loop.getChannelData(channel)) sum += x * x
+      const makeup = .12 / Math.max(1e-4, Math.sqrt(sum / (length * loop.numberOfChannels)))
+      for (let channel = 0; channel < loop.numberOfChannels; channel++) {
+        const data = loop.getChannelData(channel)
+        for (let i = 0; i < length; i++) data[i] = Math.tanh(data[i] * makeup)
+      }
       this.buffer = loop
     }).finally(() => { this.loading = null })
     await Promise.all([resumed, this.loading])

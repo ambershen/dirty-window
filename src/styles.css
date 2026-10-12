@@ -58,3 +58,37 @@ button:hover { filter: brightness(1.1); }
 .hidden {
   display: none !important;
 }
+
+/* Scene chrome shared by every material: home link, hide-UI toggle, and the ui-hidden state. */
+.scene-home, .scene-chrome-toggle {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  color: white;
+  background: #23373755;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #ffffff40;
+  cursor: pointer;
+  transition: opacity .4s;
+}
+.scene-home { left: max(16px, env(safe-area-inset-left)); }
+.scene-chrome-toggle { left: calc(max(16px, env(safe-area-inset-left)) + 52px); }
+.scene-chrome-toggle:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+body.ui-hidden .scene-chrome-toggle { left: max(16px, env(safe-area-inset-left)); opacity: .3; }
+body.ui-hidden .scene-chrome-toggle:focus-visible { opacity: 1; }
+@media (hover: hover) { body.ui-hidden .scene-chrome-toggle:hover { opacity: 1; } }
+body.ui-hidden :is(.scene-home, .sand-title, .material-switch, #sand-tools, #sand-hint, #sand-status,
+  .material-camera-preview, .material-camera-status, .material-camera-devices, #ice-tools, #ice-hint,
+  #fog-tools, #fog-controls, .fog-camera-message, .scene-tools, .tui-panel, .tui-tab) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity .4s, visibility 0s .4s;
+}
