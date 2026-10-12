@@ -1,120 +1,32 @@
-import { inject } from '@vercel/analytics'
-import { HandTracker } from './gestures/hand'
-import { GestureRouter } from './gestures/GestureRouter'
-import { LayerState } from './state/LayerState'
-import { WindowTouchLayer } from './layers/WindowTouchLayer'
-import { WeatherLayer } from './layers/WeatherLayer'
-import { DoodleLayer } from './layers/DoodleLayer'
-import { PhotoBoothLayer } from './layers/PhotoBoothLayer'
-import { TuiPanel } from './ui/TuiPanel'
-
-const video = document.getElementById('camera') as HTMLVideoElement
-const banner = document.getElementById('permission-banner') as HTMLDivElement
-const btn = document.getElementById('request-permission') as HTMLButtonElement
-
-const state = new LayerState()
-const hand = new HandTracker(video)
-
-// Create layers
-const windowTouch = new WindowTouchLayer(video, state)
-const weather = new WeatherLayer(video, state, windowTouch.fogRenderer)
-const doodle = new DoodleLayer(state)
-const photoBooth = new PhotoBoothLayer(video, state, [
-  () => windowTouch.getCanvas(),
-  () => doodle.getCanvas(),
-  () => weather.getCanvas(),
-])
-
-// Gesture routing
-const router = new GestureRouter(state, windowTouch, weather, doodle)
-
-// Sync fog visibility: show fog when windowTouch OR doodling is active
-function syncFogVisibility() {
-  const needsFog = state.windowTouch.enabled || state.doodling.enabled
-  if (needsFog) {
-    windowTouch.fogRenderer.show()
-  } else {
-    windowTouch.fogRenderer.hide()
-  }
+const mode = new URLSearchParams(location.search).get('mode')
+async function startScene() {
+  if (mode === 'home' || (!mode && !location.search)) return await import('./elements')
+  if (mode === 'steam' || mode === 'fog') return await import('./fog')
+  if (mode === 'ice') return await import('./ice')
+  if (mode === 'sand' || mode === 'snow') return await import('./sand')
+  if (mode === 'projector') return await import('./projector')
+  if (mode === 'td-controller') return await import('./td-controller')
+  if (mode === 'classic') return await import('./classic')
+  return await import('./midnight')
 }
-
-// Enable/disable layers when state changes
-state.onChange((key, config) => {
-  if (key === 'windowTouch') {
-    // Don't hide fog directly — let syncFogVisibility handle it
-    if (config.enabled) windowTouch.enable()
-    else if (!state.doodling.enabled) windowTouch.disable()
-    syncFogVisibility()
-  } else if (key === 'weather') {
-    config.enabled ? weather.enable() : weather.disable()
-  } else if (key === 'doodling') {
-    config.enabled ? doodle.enable() : doodle.disable()
-    syncFogVisibility()
-  } else if (key === 'photoBooth') {
-    config.enabled ? photoBooth.enable() : photoBooth.disable()
-  }
+const startup = startScene().then(() => {
+  if (mode === 'home' || (!mode && !location.search) || mode === 'projector' || mode === 'td-controller') return
+  const home = document.createElement('a')
+  home.href = '/?mode=home'
+  home.setAttribute('aria-label', 'Choose Water, Ice, Steam, Sand or Snow')
+  home.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/></svg>'
+  home.style.cssText = 'position:fixed;left:max(16px,env(safe-area-inset-left));top:max(16px,env(safe-area-inset-top));z-index:1000;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;color:white;background:#23373755;backdrop-filter:blur(12px);border:1px solid #ffffff40'
+  document.body.append(home)
 })
-
-// TUI panel
-const tui = new TuiPanel({
-  state,
-  photoBooth,
-  weather,
-  doodle,
-  fogRenderer: windowTouch.fogRenderer,
-  onWipeReset: () => windowTouch.fogRenderer.resetMask(),
+startup.catch(() => {
+  const app = document.getElementById('app')!
+  app.replaceChildren()
+  const message = document.createElement('p')
+  message.textContent = 'The scene could not load. Please reload to try again.'
+  message.style.padding = '32px'
+  const retry = document.createElement('button')
+  retry.textContent = 'Reload scene'
+  retry.onclick = () => location.reload()
+  app.append(message, retry)
 })
-
-async function bootstrap() {
-  const ok = await hand.initCamera()
-  if (!ok) {
-    banner.classList.remove('hidden')
-    tui.setStatus('CAMERA DENIED')
-  } else {
-    await hand.initLandmarker()
-    banner.classList.add('hidden')
-    tui.setStatus('SYSTEM READY')
-  }
-
-  btn.addEventListener('click', async () => {
-    const granted = await hand.initCamera()
-    if (granted) {
-      banner.classList.add('hidden')
-      await hand.initLandmarker()
-      tui.setStatus('SYSTEM READY')
-    }
-  })
-
-  window.addEventListener('resize', () => {
-    windowTouch.resize()
-    weather.resize()
-    doodle.resize()
-  })
-
-  loop()
-}
-
-function loop() {
-  const now = performance.now()
-  hand.update(now)
-
-  // Dispatch gestures to active layers
-  if (hand.hands.length > 0) {
-    router.dispatch(hand.hands, now)
-  } else {
-    // No hands detected: stop doodle stroke
-    doodle.stopStroke()
-    windowTouch.trimPrev(0)
-  }
-
-  // Update each active layer
-  windowTouch.update(now, hand.hands)
-  weather.update(now, hand.hands)
-  doodle.update(now, hand.hands)
-  photoBooth.update(now, hand.hands)
-
-  requestAnimationFrame(loop)
-}
-
-inject()
-bootstrap()
+export {}

@@ -5,7 +5,9 @@ import { LandmarkSmoother } from './LandmarkSmoother'
 export type GestureFeatures = {
   pinch: number       // 0..1
   openness: number    // 0..1
+  isIndexExtended: boolean
   isPointing: boolean // index finger extended, others curled
+  isOpenPalm?: boolean // all five fingers spread
   isFist: boolean     // all fingers curled
   tiltX: number       // radians delta
   tiltY: number       // radians delta
@@ -18,39 +20,79 @@ export type GestureFeatures = {
 }
 
 export class HandTracker {
+  cameraError = ''
+  resultTime = 0
   private video: HTMLVideoElement
   private landmarker: HandLandmarker | null = null
   private lastTs = 0
-  private readonly maxHz = 30
-  private readonly wasmPath = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-  private readonly modelUrl = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
+  private lastVideoTime = -1
+  private readonly maxHz: number
+  private readonly numHands: number
+  private readonly wasmPath: string
+  private readonly modelUrl: string
+  private readonly inferenceWidth: number
+  private readonly cameraDeviceId?: string
   private inferCanvas: HTMLCanvasElement | null = null
   private inferCtx: CanvasRenderingContext2D | null = null
-  private smoother = new LandmarkSmoother()
+  private smoother: LandmarkSmoother
 
   // Initialize off-screen so we don't show a "hole" in the center before detection
-  features: GestureFeatures = { pinch: 0, openness: 0.5, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
+  features: GestureFeatures = { pinch: 0, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
   hands: GestureFeatures[] = []
 
-  constructor(videoEl: HTMLVideoElement) {
+  constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string; inferenceWidth?: number; cameraDeviceId?: string } = {}) {
+    this.cameraDeviceId = options.cameraDeviceId
+    this.inferenceWidth = options.inferenceWidth ?? 320
+    this.wasmPath = options.wasmPath ?? 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+    this.modelUrl = options.modelUrl ?? 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
     this.video = videoEl
+    this.maxHz = options.maxHz ?? 30
+    this.numHands = options.numHands ?? 2
+    this.smoother = new LandmarkSmoother(options.minCutoff ?? 1, options.beta ?? 0.007)
   }
 
-  async initCamera(): Promise<boolean> {
+  async initCamera(onProgress?: (message: string) => void, facing: 'user' | 'environment' = 'user'): Promise<boolean> {
+    let stream: MediaStream | null = null
+    let abandoned = false
+    let timeout: ReturnType<typeof setTimeout> | undefined
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      this.cameraError = ''
+      const initialize = async () => {
+      const acquired = await navigator.mediaDevices.getUserMedia({ video: {
+        ...(this.cameraDeviceId ? { deviceId: { exact: this.cameraDeviceId } } : {}),
+        facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 },
+        frameRate: { ideal: this.maxHz }
+      }, audio: false })
+      if (abandoned) { acquired.getTracks().forEach(track=>track.stop()); return false }
+      stream = acquired
+      onProgress?.('Starting camera video…')
       this.video.srcObject = stream
       await this.video.play()
+      if (abandoned) return false
+      this.lastTs = 0
+      this.lastVideoTime = -1
+      this.smoother.clearAll()
       // Prepare downscaled canvas for inference
-      const w = Math.max(160, Math.min(320, this.video.videoWidth))
+      const w = Math.max(160, Math.min(this.inferenceWidth, this.video.videoWidth))
       const h = Math.round(w * (this.video.videoHeight / this.video.videoWidth || 3/4))
       this.inferCanvas = document.createElement('canvas')
       this.inferCanvas.width = w
       this.inferCanvas.height = h
       this.inferCtx = this.inferCanvas.getContext('2d')
       return true
+      }
+      return await Promise.race([initialize(), new Promise<never>((_, reject) => {
+        timeout = setTimeout(()=>reject(new Error('Camera startup timed out. Check camera access and try again.')),15000)
+      })])
     } catch (e) {
+      abandoned = true
+      const current = this.video.srcObject as MediaStream | null
+      current?.getTracks().forEach(track=>track.stop())
+      this.video.srcObject = null
+      this.cameraError = e instanceof Error ? e.message : String(e)
       return false
+    } finally {
+      clearTimeout(timeout)
     }
   }
 
@@ -62,22 +104,31 @@ export class HandTracker {
         delegate: 'GPU'
       },
       runningMode: 'VIDEO',
-      numHands: 2,
+      numHands: this.numHands,
       minHandDetectionConfidence: 0.5,
       minHandPresenceConfidence: 0.5,
       minTrackingConfidence: 0.5
     })
   }
 
+  dispose() {
+    (this.video.srcObject as MediaStream|null)?.getTracks().forEach(track=>track.stop())
+    this.video.srcObject=null
+    this.landmarker?.close();this.landmarker=null;this.hands=[];this.smoother.clearAll()
+  }
+
   update(now: number) {
     // Decimate inference to maxHz
     if (!this.landmarker || !this.video.videoWidth || !this.inferCtx || !this.inferCanvas) return
-    if (now - this.lastTs < 1000 / this.maxHz) return
+    if (this.video.currentTime === this.lastVideoTime) return
+    if (now - this.lastTs < 1000 / this.maxHz - 2) return
     this.lastTs = now
+    this.lastVideoTime = this.video.currentTime
 
     // Draw downscaled frame
     this.inferCtx.drawImage(this.video, 0, 0, this.inferCanvas.width, this.inferCanvas.height)
     const result = this.landmarker.detectForVideo(this.inferCanvas as unknown as HTMLCanvasElement, now)
+    this.resultTime=now
     if (!result || !result.landmarks || result.landmarks.length === 0) {
       this.hands = []
       this.smoother.clearAll()
@@ -118,14 +169,29 @@ function computeFeatures(lm: LM[]): GestureFeatures {
 
   // isPointing: only index finger extended, all others curled
   const indexExtended = dist(lm[8], wrist) > dist(lm[6], wrist)
+  // A curled index can still be farther from the wrist at some camera angles.
+  // Require its segments to align and its tip to extend beyond the knuckle.
+  const base = { x: lm[6].x-lm[5].x, y: lm[6].y-lm[5].y, z: lm[6].z-lm[5].z }
+  const tip = { x: lm[8].x-lm[6].x, y: lm[8].y-lm[6].y, z: lm[8].z-lm[6].z }
+  const alignment = (base.x*tip.x + base.y*tip.y + base.z*tip.z) /
+    Math.max(1e-8, Math.hypot(base.x,base.y,base.z)*Math.hypot(tip.x,tip.y,tip.z))
+  const indexStraight = alignment > 0.7 && dist(lm[8],lm[5]) > dist(lm[6],lm[5])*1.6
   const thumbCurled = dist(lm[4], palm) < handScale * 1.0
   const middleCurled = dist(lm[12], palm) < handScale * 0.8
   const ringCurled = dist(lm[16], palm) < handScale * 0.8
   const pinkyCurled = dist(lm[20], palm) < handScale * 0.8
-  const isPointing = indexExtended && thumbCurled && middleCurled && ringCurled && pinkyCurled && openness < 0.55
+  const isPointing = indexExtended && indexStraight && thumbCurled && middleCurled && ringCurled && pinkyCurled && openness < 0.55
 
   // isFist: all fingertips close to palm
   const isFist = tips.every(t => dist(t, palm) < handScale * 0.8)
+
+  // Palm wiping must tolerate a relaxed thumb and a slightly angled hand.
+  // Pinch already measures thumb separation; requiring the thumb to be a full
+  // palm-length from the centre rejected ordinary open hands.
+  const isOpenPalm = !isFist && pinch < .62 &&
+    [[8,6],[12,10],[16,14],[20,18]].every(([tip,joint]) =>
+      dist(lm[tip],wrist)>dist(lm[joint],wrist)*1.02 &&
+      dist(lm[tip],palm)>handScale*.65)
 
   // Tilt: use wrist→mid direction as palm normal proxy in screen space
   const dx = (mid.x - wrist.x)
@@ -150,7 +216,7 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const width = maxX - minX
   const height = maxY - minY
 
-  return { pinch, openness, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
+  return { pinch, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
 }
 
 function dist(a: LM, b: LM) { const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z; return Math.sqrt(dx*dx + dy*dy + dz*dz) }

@@ -1,3 +1,9 @@
 node_modules/
 dist/
 .DS_Store
+
+# Local TouchDesigner runtime and generated recordings
+touchdesigner-mcp-td/
+touchdesigner/pond/recordings/
+__pycache__/
+*.pyc
