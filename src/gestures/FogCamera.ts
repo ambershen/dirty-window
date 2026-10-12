@@ -1,5 +1,36 @@
 import { HandTracker } from './hand'
 
+/** Thumb and index must meet at least this far from the palm centre (in palm lengths) to start writing. */
+const PINCH_REACH=.65
+
+/** `?debug` readout: camera frame rate, tracking rate, inference time and capture-to-sample delay. */
+class CameraDebug {
+ private el=document.createElement('pre')
+ private frames:number[]=[]
+ private samples:number[]=[]
+ private inference=0
+ private delay=0
+ private pose=''
+ private video:HTMLVideoElement|null=null
+ constructor(){this.el.style.cssText='position:fixed;right:16px;top:16px;z-index:2000;margin:0;padding:10px 12px;border-radius:10px;background:#000a;color:#bfffd0;font:11px/1.6 ui-monospace,monospace;pointer-events:none';setInterval(()=>this.render(),500)}
+ show(video:HTMLVideoElement){this.video=video;document.body.append(this.el)}
+ frame(now:number){this.frames.push(now)}
+ gesture(pinch:number,reach:number,fist:boolean,palm:boolean,action:string){this.pose=`pinch ${pinch.toFixed(2)} (start >0.72)  reach ${reach.toFixed(2)} (start >${PINCH_REACH})\nfist ${fist?'yes':'no'}  palm ${palm?'yes':'no'}  → ${action}`}
+ sample(at:number,capture:number,inference:number){this.samples.push(at);this.inference=this.inference*.8+inference*.2;if(capture)this.delay=this.delay*.8+(at-capture)*.2}
+ private render(){
+  if(!this.video)return
+  const rate=(list:number[])=>{const now=performance.now();while(list.length&&now-list[0]>1000)list.shift();return list.length}
+  const settings=(this.video.srcObject as MediaStream|null)?.getVideoTracks()[0]?.getSettings()
+  const max=(this.video.srcObject as MediaStream|null)?.getVideoTracks()[0]?.getCapabilities?.().frameRate?.max
+  this.el.textContent=`camera  ${settings?.width??'?'}×${settings?.height??'?'} @ ${Math.round(settings?.frameRate??0)} fps (max ${max?Math.round(max):'?'})
+frames  ${rate(this.frames)} /s
+tracked ${rate(this.samples)} /s
+infer   ${this.inference.toFixed(1)} ms
+capture→tracked ${this.delay?this.delay.toFixed(0)+' ms':'n/a (browser gives no capture time)'}
+${this.pose}`
+ }
+}
+
 /** Pinch to write; spread all five fingers to wipe; release to pause. */
 export class FogCamera {
  get reflection(){return this.video.readyState>=2&&this.video.srcObject?this.video:null}
@@ -10,7 +41,11 @@ export class FogCamera {
  private epoch=0
  private raf=0
  private pinched=false
- private action='idle'
+ private action:'idle'|'write'|'wipe'='idle'
+ private candidate:'idle'|'write'|'wipe'='idle'
+ private pending=0
+ private lastSeen=0
+ private radius=0
  private running=false
  private videoCallback=0
  private inferTimer:ReturnType<typeof setTimeout>|undefined
@@ -19,6 +54,10 @@ export class FogCamera {
  private position:{x:number;y:number}|null=null
  private target={x:0,y:0}
  private velocity={x:0,y:0}
+ private frameCapture=0
+ private armedAt=0
+ private sampleCapture=0
+ private debug=new URLSearchParams(location.search).has('debug')?new CameraDebug():null
  constructor(private button:HTMLButtonElement,private draw:(x:number,y:number,now:number)=>void,private release:()=>void,private wipe:(x:number,y:number,radius:number,now:number)=>void){
   this.video.muted=true;this.video.playsInline=true;this.video.className='fog-camera-video';document.body.append(this.video)
   this.cursor.className='fog-hand-cursor';this.cursor.hidden=true;document.body.append(this.cursor)
@@ -27,23 +66,26 @@ export class FogCamera {
   document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stop()})
   addEventListener('blur',()=>{this.pinched=false;this.release()})
  }
- stop(){this.epoch++;this.running=false;cancelAnimationFrame(this.raf);clearTimeout(this.inferTimer);if(this.videoCallback)this.video.cancelVideoFrameCallback?.(this.videoCallback);this.position=null;this.lastResult=0;this.velocity={x:0,y:0};this.pinched=false;this.release();this.tracker?.dispose();this.tracker=null;this.cursor.hidden=true;this.message.hidden=true;this.button.setAttribute('aria-pressed','false');this.button.setAttribute('aria-label','Enable finger drawing camera')}
+ stop(){this.epoch++;this.running=false;cancelAnimationFrame(this.raf);clearTimeout(this.inferTimer);if(this.videoCallback)this.video.cancelVideoFrameCallback?.(this.videoCallback);this.position=null;this.lastResult=0;this.velocity={x:0,y:0};this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.radius=0;this.release();this.tracker?.dispose();this.tracker=null;this.cursor.hidden=true;this.message.hidden=true;this.button.setAttribute('aria-pressed','false');this.button.setAttribute('aria-label','Enable finger drawing camera')}
  private async start(){
   const epoch=++this.epoch
-  const tracker=new HandTracker(this.video,{maxHz:30,numHands:2,minCutoff:18,beta:8,wasmPath:'/vision',modelUrl:'/hand_landmarker.task'})
+  // One hand: with numHands 2, MediaPipe reruns the slow palm detector on every frame while
+  // only one hand is visible. 60 Hz halves the frame interval on cameras that support it, and a
+  // lower tracking threshold keeps hold of a motion-blurred hand instead of re-detecting it.
+  const tracker=new HandTracker(this.video,{maxHz:60,numHands:1,minCutoff:18,beta:8,trackingConfidence:.3,wasmPath:'/vision',modelUrl:'/hand_landmarker.task'})
   this.tracker=tracker;this.message.textContent='Starting camera…';this.message.hidden=false;this.button.setAttribute('aria-label','Cancel camera')
   try{
    if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera needs HTTPS and a browser with camera access.')
    const ready=await tracker.initCamera();if(epoch!==this.epoch){tracker.dispose();return}
    if(!ready)throw Error(tracker.cameraError||'Camera unavailable. Allow camera access and try again.')
    await tracker.initLandmarker();if(epoch!==this.epoch){tracker.dispose();return}
-   this.running=true;this.message.hidden=true;this.button.setAttribute('aria-pressed','true');this.button.setAttribute('aria-label','Turn off finger drawing camera');this.scheduleInference();this.raf=requestAnimationFrame(this.frame)
+   this.running=true;this.armedAt=performance.now()+800;this.message.hidden=true;this.debug?.show(this.video);this.button.setAttribute('aria-pressed','true');this.button.setAttribute('aria-label','Turn off finger drawing camera');this.scheduleInference();this.raf=requestAnimationFrame(this.frame)
   }catch(error){tracker.dispose();if(epoch!==this.epoch)return;this.stop();this.message.textContent=error instanceof Error?error.message:'Camera unavailable';this.message.hidden=false}
  }
  private scheduleInference(){
   if(!this.running)return
-  const infer=()=>{if(!this.running)return;try{this.tracker?.update(performance.now())}catch{this.stop();this.message.textContent='Tracking interrupted. Tap the camera button to retry.';this.message.hidden=false;return}this.scheduleInference()}
-  if(this.video.requestVideoFrameCallback)this.videoCallback=this.video.requestVideoFrameCallback(()=>{this.inferTimer=setTimeout(infer,0)})
+  const infer=()=>{if(!this.running)return;try{const before=this.tracker?.resultTime;this.tracker?.update(performance.now());if(this.tracker&&this.tracker.resultTime!==before){this.sampleCapture=this.frameCapture;this.debug?.sample(this.tracker.resultTime,this.frameCapture,this.tracker.inferenceMs)}}catch{this.stop();this.message.textContent='Tracking interrupted. Tap the camera button to retry.';this.message.hidden=false;return}this.scheduleInference()}
+  if(this.video.requestVideoFrameCallback)this.videoCallback=this.video.requestVideoFrameCallback((now,frame)=>{this.frameCapture=frame.captureTime??0;this.debug?.frame(now);this.inferTimer=setTimeout(infer,0)})
   else this.inferTimer=setTimeout(infer,33)
  }
  private frame=(now:number)=>{
@@ -52,37 +94,65 @@ export class FogCamera {
    const tracked=this.tracker.hands
    const hand=this.position?tracked.reduce((best,h)=>!best||Math.hypot(h.indexTipX-this.target.x,h.indexTipY-this.target.y)<Math.hypot(best.indexTipX-this.target.x,best.indexTipY-this.target.y)?h:best,tracked[0]):tracked[0]
    const sampleTime=this.tracker.resultTime
-   const visible=!!hand&&now-sampleTime<150&&document.hasFocus()
-   this.cursor.hidden=!visible
-   if(visible){
-    const wiping=!!hand.isOpenPalm
-    const nextPinched=!hand.isFist&&!wiping&&hand.pinch>(this.pinched?.58:.72)
-    const action=wiping?'wipe':nextPinched?'write':'idle'
-    if(action!==this.action){this.release();this.position=null;this.velocity={x:0,y:0};this.lastResult=0;this.action=action}
-    this.pinched=nextPinched
+   if(hand&&now-sampleTime<150){
+    this.lastSeen=now;this.cursor.hidden=false
     if(sampleTime!==this.lastResult){
-     const dt=Math.max(.008,(sampleTime-this.lastResult)/1000)
+     // Classify once per camera sample. Moving hands blur, so a few unclear samples must
+     // not end a wipe or a written stroke; entering a wipe also needs two agreeing samples.
+     // A writing pinch curls the other fingers, which can read as a fist, so the fist
+     // check only guards the start of a stroke.
+     const writing=this.action==='write'
+     // Ignore gestures just after the camera starts, and hands filling much of the frame:
+     // both are usually a hand reaching for the keyboard or trackpad, not one at the glass.
+     const settling=now<this.armedAt||hand.width>.5||hand.height>.6
+     const pinchStart=hand.pinch>.72&&!hand.isFist&&hand.pinchReach>PINCH_REACH
+     const raw=settling?'idle':hand.isOpenPalm&&!hand.isFist?'wipe':writing?hand.pinch>.52?'write':'idle':pinchStart?'write':'idle'
+     this.debug?.gesture(hand.pinch,hand.pinchReach,hand.isFist,!!hand.isOpenPalm,this.action)
+     if(raw===this.action)this.pending=0
+     else{
+      if(raw!==this.candidate){this.candidate=raw;this.pending=0}
+      const needed=this.action==='wipe'?3:this.action==='write'?4:raw==='idle'?1:2
+      if(++this.pending>=needed){this.release();this.position=null;this.velocity={x:0,y:0};this.action=raw;this.pending=0}
+     }
+     this.pinched=this.action==='write'
+     const dt=Math.max(.008,(sampleTime-this.lastResult)/1000),wiping=this.action==='wipe'
      // Match the mirrored, aspect-preserving cover crop used by the fog canvas.
      const scale=Math.max(innerWidth/this.video.videoWidth,innerHeight/this.video.videoHeight)
      const x=((wiping?hand.x:hand.indexTipX)*this.video.videoWidth*scale-(this.video.videoWidth*scale-innerWidth)/2)/innerWidth
      const y=((wiping?hand.y:hand.indexTipY)*this.video.videoHeight*scale-(this.video.videoHeight*scale-innerHeight)/2)/innerHeight
-     this.velocity=this.position?{x:(x-this.target.x)/dt,y:(y-this.target.y)/dt}:{x:0,y:0}
+     // Smoothed velocity: raw differences between 60 Hz samples are noisy.
+     const vx=(x-this.target.x)/dt,vy=(y-this.target.y)/dt
+     this.velocity=this.position?{x:this.velocity.x*.5+vx*.5,y:this.velocity.y*.5+vy*.5}:{x:0,y:0}
      this.target={x,y};this.lastResult=sampleTime
+     const radius=Math.max(55,Math.min(160,hand.width*this.video.videoWidth*scale*.6))
+     this.radius=this.radius?this.radius+(radius-this.radius)*.3:radius
     }
     // Bridge camera samples at display cadence. Prediction is limited to 12 ms
     // and four screen pixels, and never extends a released or missing contact.
-    const lead=Math.min(.012,Math.max(0,(now-sampleTime)/1000))
-    const tx=this.target.x+Math.max(-4/innerWidth,Math.min(4/innerWidth,this.velocity.x*lead))
-    const ty=this.target.y+Math.max(-4/innerHeight,Math.min(4/innerHeight,this.velocity.y*lead))
+    // A wipe projects forward over part of the camera's capture-to-screen delay, so the
+    // clearing keeps up with the palm; a broad wipe hides small overshoot. Writing stays
+    // conservative so letters do not overshoot.
+    // Without a capture timestamp (common on macOS), assume a typical ~60 ms webcam pipeline.
+    const age=this.sampleCapture?(now-this.sampleCapture)/1000:(now-sampleTime)/1000+.06,wiping=this.action==='wipe'
+    const lead=wiping?Math.min(.045,Math.max(0,age*.6)):Math.min(.012,Math.max(0,(now-sampleTime)/1000))
+    const reach=wiping?Math.min(innerWidth,innerHeight)*.035:4
+    const tx=this.target.x+Math.max(-reach/innerWidth,Math.min(reach/innerWidth,this.velocity.x*lead))
+    const ty=this.target.y+Math.max(-reach/innerHeight,Math.min(reach/innerHeight,this.velocity.y*lead))
     const blend=1-Math.exp(-Math.min(.05,(now-this.lastFrame)/1000)*65)
     if(!this.position)this.position={x:tx,y:ty}
     else{this.position.x+=(tx-this.position.x)*blend;this.position.y+=(ty-this.position.y)*blend}
     const x=Math.max(0,Math.min(1,this.position.x)),y=Math.max(0,Math.min(1,this.position.y))
     this.cursor.style.left=`${x*100}%`;this.cursor.style.top=`${y*100}%`;this.cursor.classList.toggle('drawing',this.pinched)
-    this.cursor.classList.toggle('wiping',wiping)
-    if(wiping){const scale=Math.max(innerWidth/this.video.videoWidth,innerHeight/this.video.videoHeight);this.wipe(x,y,Math.max(55,Math.min(160,hand.width*this.video.videoWidth*scale*.6)),now)}
-    else if(this.pinched)this.draw(x,y,now);else this.release()
-   }else{this.pinched=false;this.action='idle';this.position=null;this.velocity={x:0,y:0};this.release()}
+    this.cursor.classList.toggle('wiping',this.action==='wipe')
+    if(this.action==='wipe')this.wipe(x,y,this.radius,now)
+    else if(this.action==='write'){
+     // The pen may be lifting: pause without ending the stroke. If the pinch returns,
+     // drawing resumes and the stroke bridges the gap instead of starting a new fragment.
+     if(!(this.pending&&this.candidate!=='write'))this.draw(x,y,now)
+    }else this.release()
+   }else if(this.action!=='idle'&&now-this.lastSeen<160){
+    // Brief detection dropout mid-stroke: hold the stroke open without drawing.
+   }else{this.cursor.hidden=true;this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.position=null;this.radius=0;this.velocity={x:0,y:0};this.release()}
    this.lastFrame=now;this.raf=requestAnimationFrame(this.frame)
   }catch{this.stop();this.message.textContent='Hand tracking stopped. Tap the camera button to retry.';this.message.hidden=false}
  }

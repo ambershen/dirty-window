@@ -12,18 +12,43 @@ function layer(){const c=document.createElement('canvas');return {c,g:c.getConte
 const scene=layer(),veil=layer(),wet=layer(),mask=layer(),composite=layer()
 // Reuse brush textures instead of allocating thousands of gradients every frame.
 const brushes=Array.from({length:17},(_,i)=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d')!,v=i/16,gradient=g.createRadialGradient(32,32,0,32,32,32);gradient.addColorStop(0,'#fff');gradient.addColorStop(.25+.47*v,'rgba(255,255,255,.85)');gradient.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gradient;g.fillRect(0,0,64,64);return c})
+// A palm wipe: long across the hand, short along the motion, with fainter lines where
+// the gaps between fingers leave condensation behind. x runs along the motion, y across.
+const wipeBrush=(()=>{const c=document.createElement('canvas');c.width=48;c.height=128;const g=c.getContext('2d')!,image=g.createImageData(48,128)
+ const fibres=Array.from({length:128},()=>.7+.3*Math.random())
+ for(let j=0;j<128;j++)for(let i=0;i<48;i++){
+  const u=(j+.5)/64-1,v=(i+.5)/24-1,reach=Math.hypot(u,v),edge=reach>=1?0:reach<.72?1:(1-reach)/.28
+  const fingers=.4+.6*Math.pow(Math.abs(Math.sin(u*Math.PI*2)),.35)
+  const k=(j*48+i)*4;image.data[k]=image.data[k+1]=image.data[k+2]=255;image.data[k+3]=255*edge*edge*(3-2*edge)*fingers*fibres[j]
+ }
+ g.putImageData(image,0,0);return c})()
+// A bead of collected water at the head of a drip.
+const bead=(()=>{const c=document.createElement('canvas');c.width=c.height=24;const g=c.getContext('2d')!,gradient=g.createRadialGradient(10,9,0,12,12,12)
+ gradient.addColorStop(0,'rgba(252,253,250,.85)');gradient.addColorStop(.45,'rgba(220,228,224,.35)');gradient.addColorStop(.8,'rgba(55,64,60,.35)');gradient.addColorStop(1,'rgba(55,64,60,0)')
+ g.fillStyle=gradient;g.fillRect(0,0,24,24);return c})()
 let maskDirty=true,lastMask=-Infinity
-type Mark={x:number;y:number;px:number;py:number;r:number;born:number;hold:number;fade:number;drawing?:boolean}
-const marks:Mark[]=[],hands=new Map<number,{x:number;y:number;t:number;r:number;distance:number;marks:Mark[]}>()
+type Mark={x:number;y:number;px:number;py:number;r:number;born:number;hold:number;fade:number;drawing?:boolean;cos?:number;sin?:number}
+type Drip={x:number;y:number;lx:number;ly:number;speed:number;r:number;life:number;age:number;phase:number}
+const marks:Mark[]=[],drips:Drip[]=[],hands=new Map<number,{x:number;y:number;t:number;r:number;distance:number;marks:Mark[];dx?:number;dy?:number;water?:number}>()
+const WIPE_ALPHA=.3
+const stepOf=(s:Mark)=>s.cos!==undefined?Math.max(7,s.r*.22):s.r<10?Math.max(1.5,s.r*.6):7
+function stamp(g:CanvasRenderingContext2D,s:Mark,x:number,y:number,clarity:number){
+ if(s.cos===undefined){g.globalAlpha=.92*clarity;g.drawImage(brushes[Math.round(clarity*16)],x-s.r,y-s.r,s.r*2,s.r*2);return}
+ // Overlapping low-alpha stamps: one pass leaves a streaky film, a second pass clears it.
+ g.globalAlpha=WIPE_ALPHA*clarity;g.setTransform(s.cos,s.sin!,-s.sin!,s.cos,x,y);g.drawImage(wipeBrush,-s.r*.45,-s.r,s.r*.9,s.r*2);g.setTransform(1,0,0,1,0,0)
+}
+function spawnDrip(x:number,y:number){if(drips.length<28)drips.push({x,y,lx:x,ly:y,speed:22+Math.random()*48,r:1.5+Math.random()*1.7,life:1.2+Math.random()*3.8,age:0,phase:Math.random()*6.3})}
 let w=1,h=1,last=performance.now(),photo:HTMLImageElement|null=null,sourceEpoch=0
 const status=document.getElementById('fog-status')!
 function drawScene(){const warmth=settings.temperature/100;const video=camera.reflection,g=scene.g;const gradient=g.createLinearGradient(0,0,w,h);gradient.addColorStop(0,'#60676b');gradient.addColorStop(.6,'#81898c');gradient.addColorStop(1,'#a3aaac');g.fillStyle=gradient;g.fillRect(0,0,w,h)
  if(video){const s=Math.max(w/video.videoWidth,h/video.videoHeight);g.save();g.translate(w,0);g.scale(-1,1);g.drawImage(video,(w-video.videoWidth*s)/2,(h-video.videoHeight*s)/2,video.videoWidth*s,video.videoHeight*s);g.restore()}
  else if(photo){const s=Math.max(w/photo.naturalWidth,h/photo.naturalHeight);g.drawImage(photo,(w-photo.naturalWidth*s)/2,(h-photo.naturalHeight*s)/2,photo.naturalWidth*s,photo.naturalHeight*s)}
- // A soft veil over the actual view, without baked highlights or droplets.
- const v=veil.g;v.clearRect(0,0,w,h);v.save();v.filter=`blur(${(video?18:32)*(.25+.75*settings.dirty)*(1.4-.8*warmth)}px)`;v.drawImage(scene.c,-20,-20,w+40,h+40);v.restore();v.fillStyle=video?`rgba(195,200,193,${.68-.4*warmth})`:`rgba(174,179,175,${.96-.2*warmth})`;v.fillRect(0,0,w,h)
- v.drawImage(wet.c,0,0)
+ // A soft veil over the actual view, without baked highlights or droplets. It is blurred at
+ // quarter resolution: the result looks the same, and a full-screen blur every camera frame
+ // starved the hand tracker on the main thread.
+ const v=veil.g,vw=veil.c.width,vh=veil.c.height;v.clearRect(0,0,vw,vh);v.save();v.filter=`blur(${(video?18:32)*(.25+.75*settings.dirty)*(1.4-.8*warmth)/VEIL_SCALE}px)`;v.drawImage(scene.c,-5,-5,vw+10,vh+10);v.restore();v.fillStyle=video?`rgba(195,200,193,${.68-.4*warmth})`:`rgba(174,179,175,${.96-.2*warmth})`;v.fillRect(0,0,vw,vh)
 }
+const VEIL_SCALE=4
 function texture(){
  const g=wet.g;g.clearRect(0,0,w,h)
  // Cached layers: cloudy moisture, old runnels, fine grain and refractive beads.
@@ -38,11 +63,11 @@ function texture(){
  const noise=document.createElement('canvas');noise.width=Math.ceil(w);noise.height=Math.ceil(h);noise.getContext('2d')!.putImageData(grain,0,0);g.drawImage(noise,0,0)
  const edge=g.createLinearGradient(0,0,0,h);edge.addColorStop(0,'rgba(65,75,70,.22)');edge.addColorStop(.12,'rgba(65,75,70,0)');edge.addColorStop(.8,'rgba(65,75,70,0)');edge.addColorStop(1,'rgba(65,75,70,.28)');g.fillStyle=edge;g.fillRect(0,0,w,h)
 }
-function reset(){maskDirty=true;marks.length=0;hands.clear();mask.g.clearRect(0,0,w,h)}
-function resize(){w=innerWidth;h=innerHeight;const dpr=Math.min(1.5,devicePixelRatio);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);for(const {c} of [scene,veil,wet,mask,composite]){c.width=w;c.height=h}reset();texture();drawScene()}
-function mark(x:number,y:number,px:number,py:number,r:number,now:number,hold=settings.hold,fade=settings.fade){const stroke:Mark={x,y,px,py,r,born:now,hold,fade};marks.push(stroke);
- const g=mask.g,steps=Math.max(1,Math.ceil(Math.hypot(x-px,y-py)/7));g.globalCompositeOperation='source-over';g.globalAlpha=.92
- for(let j=0;j<steps;j++){const t=(j+.5)/steps;g.drawImage(brushes[16],px+(x-px)*t-r,py+(y-py)*t-r,r*2,r*2)}g.globalAlpha=1
+function reset(){maskDirty=true;marks.length=0;drips.length=0;hands.clear();mask.g.clearRect(0,0,w,h)}
+function resize(){w=innerWidth;h=innerHeight;const dpr=Math.min(1.5,devicePixelRatio);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);for(const {c} of [scene,wet,mask,composite]){c.width=w;c.height=h}veil.c.width=Math.ceil(w/VEIL_SCALE);veil.c.height=Math.ceil(h/VEIL_SCALE);reset();texture();drawScene()}
+function mark(x:number,y:number,px:number,py:number,r:number,now:number,hold=settings.hold,fade=settings.fade,angle?:number){const stroke:Mark={x,y,px,py,r,born:now,hold,fade};if(angle!==undefined){stroke.cos=Math.cos(angle);stroke.sin=Math.sin(angle)}marks.push(stroke);
+ const g=mask.g,steps=Math.max(1,Math.ceil(Math.hypot(x-px,y-py)/stepOf(stroke)));g.globalCompositeOperation='source-over'
+ for(let j=0;j<steps;j++){const t=(j+.5)/steps;stamp(g,stroke,px+(x-px)*t,py+(y-py)*t,1)}g.globalAlpha=1
  return stroke}
 function startDrawing(id:number,x:number,y:number,now:number){const stroke=mark(x,y,x,y,settings.brush,now);stroke.drawing=true;hands.set(id,{x,y,t:now,r:settings.brush,distance:0,marks:[stroke]})}
 function moveDrawing(id:number,x:number,y:number,now:number){const p=hands.get(id);if(!p)return;const dist=Math.hypot(x-p.x,y-p.y);if(dist<1)return;const speed=dist/Math.max(8,now-p.t),target=settings.brush*(.85+Math.min(2,speed*1.5)),r=p.r+(target-p.r)*.35;
@@ -54,6 +79,8 @@ canvas.onpointermove=e=>moveDrawing(e.pointerId,e.clientX,e.clientY,performance.
 function finishHand(id:number,now:number){const p=hands.get(id);if(!p)return
  // Hold the whole gesture after the finger lifts, including its earliest marks.
  for(const stroke of p.marks){stroke.born=now;stroke.drawing=false}
+ // Water pushed ahead of the palm gathers at the end of the wipe and runs down.
+ if(p.water!==undefined&&p.distance>40)for(let i=0;i<2;i++)spawnDrip(p.x+(Math.random()-.5)*p.r,p.y+p.r*.8)
  hands.delete(id)
 }
 function release(e:PointerEvent){finishHand(e.pointerId,performance.now())}
@@ -62,7 +89,18 @@ canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=release
 const camera=new FogCamera(document.getElementById('fog-camera') as HTMLButtonElement,
  (x,y,now)=>{const id=-100;if(!hands.has(id))startDrawing(id,x*w,y*h,now);else moveDrawing(id,x*w,y*h,now)},
  ()=>{finishHand(-100,performance.now());finishHand(-101,performance.now())},
- (x,y,r,now)=>{const id=-101;let p=hands.get(id);if(!p){hands.set(id,{x:x*w,y:y*h,t:now,r,distance:0,marks:[]});p=hands.get(id)!}const stroke=mark(x*w,y*h,p.x,p.y,r,now);stroke.drawing=true;p.marks.push(stroke);p.distance+=Math.hypot(x*w-p.x,y*h-p.y);p.x=x*w;p.y=y*h;p.t=now})
+ (x,y,r,now)=>{const id=-101,nx=x*w,ny=y*h;let p=hands.get(id)
+  if(!p){
+   // The palm landing on the glass leaves a soft print before it moves.
+   const print=mark(nx,ny,nx,ny,r*.7,now);print.drawing=true
+   hands.set(id,{x:nx,y:ny,t:now,r,distance:0,marks:[print],dx:0,dy:1,water:0});return
+  }
+  const d=Math.hypot(nx-p.x,ny-p.y);if(d<2)return
+  // Smooth the travel direction so the hand-shaped stamp does not twitch with tracking noise.
+  p.dx=p.dx!*.7+(nx-p.x)/d*.3;p.dy=p.dy!*.7+(ny-p.y)/d*.3;p.r+=(r-p.r)*.3
+  const stroke=mark(nx,ny,p.x,p.y,p.r,now,settings.hold,settings.fade,Math.atan2(p.dy,p.dx));stroke.drawing=true;p.marks.push(stroke)
+  p.water!+=d;if(p.water!>240){p.water=Math.random()*90;spawnDrip(nx+(Math.random()-.5)*p.r*1.2,ny+p.r*.8)}
+  p.distance+=d;p.x=nx;p.y=ny;p.t=now})
 const breath=new FogBreath(document.getElementById('fog-breath') as HTMLButtonElement,document.getElementById('fog-breath-status')!,
  (strength,now)=>{const r=Math.min(w,h)*(.07+.1*strength);mark(w*.5,h*.5,w*.5,h*.5,r,now)})
 addEventListener('pagehide',()=>{camera.stop();breath.stop()})
@@ -79,7 +117,7 @@ function frame(now:number){const dt=Math.min(.05,(now-last)/1000);last=now
  if(maskDirty||now-lastMask>=50){
  maskDirty=false;lastMask=now
  const m=mask.g;m.globalCompositeOperation='source-over';m.clearRect(0,0,w,h);m.lineCap='round';m.lineJoin='round'
- for(let i=marks.length-1;i>=0;i--){const s=marks[i],age=s.drawing?0:(now-s.born)/1000;if(age>s.hold+s.fade*1.03){marks.splice(i,1);continue}const steps=Math.max(1,Math.ceil(Math.hypot(s.x-s.px,s.y-s.py)/7))
+ for(let i=marks.length-1;i>=0;i--){const s=marks[i],age=s.drawing?0:(now-s.born)/1000;if(age>s.hold+s.fade*1.03){marks.splice(i,1);continue}const steps=Math.max(1,Math.ceil(Math.hypot(s.x-s.px,s.y-s.py)/stepOf(s)))
   for(let j=0;j<steps;j++){
    const t=(j+.5)/steps,x=s.px+(s.x-s.px)*t,y=s.py+(s.y-s.py)*t
    const humidity=.8+.2*Math.sin(x*.037+y*.019)*Math.cos(y*.043)
@@ -88,17 +126,21 @@ function frame(now:number){const dt=Math.min(.05,(now-last)/1000);last=now
    // Smooth endpoints: no sudden final removal, and no minute-long exponential tail.
    const progress=Math.min(1,elapsed/(s.fade*(.78+humidity*.24)))
    const ambientClarity=1-progress*progress*(3-2*progress)
-   const clarity=ambientClarity
-   const radius=s.r,alpha=.92*clarity
-   const drawY=y
-   m.globalAlpha=alpha;m.drawImage(brushes[Math.round(clarity*16)],x-radius,drawY-radius,radius*2,radius*2)
-
+   stamp(m,s,x,y,ambientClarity)
   }}
  m.globalAlpha=1;m.globalCompositeOperation='source-over'
  }
+ // Drips surge and stall as they run down, each clearing a thin trail through the fog.
+ for(let i=drips.length-1;i>=0;i--){const d=drips[i];d.age+=dt
+  if(d.age>d.life+.6||d.y>h+12){drips.splice(i,1);continue}
+  if(d.age<d.life){d.y+=d.speed*(.35+.65*Math.max(0,Math.sin(d.age*2.4+d.phase)))*dt;d.x+=Math.sin(d.age*1.7+d.phase)*5*dt}
+  if(Math.hypot(d.x-d.lx,d.y-d.ly)>=4){mark(d.x,d.y,d.lx,d.ly,d.r,now,settings.hold+6,settings.fade);d.lx=d.x;d.ly=d.y}
+ }
  // Wet boundary follows the same mask as the clear stroke.
  ctx.drawImage(scene.c,0,0,w,h)
- const g=composite.g;g.globalCompositeOperation='source-over';g.clearRect(0,0,w,h);g.drawImage(veil.c,0,0);g.globalCompositeOperation='destination-out';g.globalAlpha=.95;g.drawImage(mask.c,0,0);g.globalAlpha=1;ctx.globalAlpha=settings.dirty;ctx.drawImage(composite.c,0,0);ctx.globalAlpha=1
+ const g=composite.g;g.globalCompositeOperation='source-over';g.clearRect(0,0,w,h);g.drawImage(veil.c,0,0,w,h);g.drawImage(wet.c,0,0);g.globalCompositeOperation='destination-out';g.globalAlpha=.95;g.drawImage(mask.c,0,0);g.globalAlpha=1;ctx.globalAlpha=settings.dirty;ctx.drawImage(composite.c,0,0)
+ for(const d of drips){ctx.globalAlpha=settings.dirty*Math.min(1,(d.life+.6-d.age)*1.6);ctx.drawImage(bead,d.x-d.r*1.7,d.y-d.r*1.7,d.r*3.4,d.r*3.4)}
+ ctx.globalAlpha=1
  requestAnimationFrame(frame)
 }
 for(const key of ['dirty','temperature','brush'] as const){

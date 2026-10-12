@@ -4,6 +4,7 @@ import { LandmarkSmoother } from './LandmarkSmoother'
 
 export type GestureFeatures = {
   pinch: number       // 0..1
+  pinchReach: number  // where thumb and index meet, from the palm centre, in palm lengths
   openness: number    // 0..1
   isIndexExtended: boolean
   isPointing: boolean // index finger extended, others curled
@@ -21,6 +22,7 @@ export type GestureFeatures = {
 
 export class HandTracker {
   cameraError = ''
+  inferenceMs = 0
   resultTime = 0
   private video: HTMLVideoElement
   private landmarker: HandLandmarker | null = null
@@ -32,15 +34,17 @@ export class HandTracker {
   private readonly modelUrl: string
   private readonly inferenceWidth: number
   private readonly cameraDeviceId?: string
+  private readonly trackingConfidence: number
   private inferCanvas: HTMLCanvasElement | null = null
   private inferCtx: CanvasRenderingContext2D | null = null
   private smoother: LandmarkSmoother
 
   // Initialize off-screen so we don't show a "hole" in the center before detection
-  features: GestureFeatures = { pinch: 0, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
+  features: GestureFeatures = { pinch: 0, pinchReach: 0, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
   hands: GestureFeatures[] = []
 
-  constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string; inferenceWidth?: number; cameraDeviceId?: string } = {}) {
+  constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string; inferenceWidth?: number; cameraDeviceId?: string; trackingConfidence?: number } = {}) {
+    this.trackingConfidence = options.trackingConfidence ?? 0.5
     this.cameraDeviceId = options.cameraDeviceId
     this.inferenceWidth = options.inferenceWidth ?? 320
     this.wasmPath = options.wasmPath ?? 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
@@ -65,6 +69,12 @@ export class HandTracker {
       }, audio: false })
       if (abandoned) { acquired.getTracks().forEach(track=>track.stop()); return false }
       stream = acquired
+      // Many webcams offer 60 fps only at 720p, so the 640×480 ideal settles on 30 fps.
+      // Inference downsamples to inferenceWidth anyway, so prefer the higher frame rate.
+      const track = acquired.getVideoTracks()[0]
+      if (this.maxHz > 30 && track && (track.getCapabilities?.().frameRate?.max ?? 0) >= 50 && (track.getSettings().frameRate ?? 0) < 50) {
+        try { await track.applyConstraints({ width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { min: 50, ideal: this.maxHz } }) } catch { /* Keep the original mode. */ }
+      }
       onProgress?.('Starting camera video…')
       this.video.srcObject = stream
       await this.video.play()
@@ -106,8 +116,8 @@ export class HandTracker {
       runningMode: 'VIDEO',
       numHands: this.numHands,
       minHandDetectionConfidence: 0.5,
-      minHandPresenceConfidence: 0.5,
-      minTrackingConfidence: 0.5
+      minHandPresenceConfidence: this.trackingConfidence,
+      minTrackingConfidence: this.trackingConfidence
     })
   }
 
@@ -127,7 +137,9 @@ export class HandTracker {
 
     // Draw downscaled frame
     this.inferCtx.drawImage(this.video, 0, 0, this.inferCanvas.width, this.inferCanvas.height)
+    const started = performance.now()
     const result = this.landmarker.detectForVideo(this.inferCanvas as unknown as HTMLCanvasElement, now)
+    this.inferenceMs = performance.now() - started
     this.resultTime=now
     if (!result || !result.landmarks || result.landmarks.length === 0) {
       this.hands = []
@@ -160,6 +172,11 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   // Pinch: normalized distance between thumb tip and index tip
   const pinchDist = dist(thbTip, idxTip)
   const pinch = clamp(1 - (pinchDist / (handScale * 1.5)), 0, 1)
+
+  // A real pinch meets in front of the palm; in a fist the thumb rests on the curled index,
+  // so the tips are also close together but sit over the palm.
+  const palmCentre = centroid([lm[0], lm[5], lm[9], lm[13], lm[17]])
+  const pinchReach = dist(centroid([thbTip, idxTip]), palmCentre) / handScale
 
   // Openness: average distance of fingertips to palm center
   const tips = [lm[4], lm[8], lm[12], lm[16], lm[20]]
@@ -216,7 +233,7 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const width = maxX - minX
   const height = maxY - minY
 
-  return { pinch, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
+  return { pinch, pinchReach, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
 }
 
 function dist(a: LM, b: LM) { const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z; return Math.sqrt(dx*dx + dy*dy + dz*dz) }
