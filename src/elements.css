@@ -1,27 +1,44 @@
-.elements{height:100%;min-height:560px;box-sizing:border-box;background:#e9e9e2;color:#303d39;display:flex;flex-direction:column;padding:32px clamp(20px,5vw,80px) 20px;font-family:Arial,sans-serif}
-.elements-heading{text-align:center;padding:0 0 30px;flex-shrink:0}.edition{font-size:9px;letter-spacing:.25em;color:#69766e}.elements-heading h1{font-family:Georgia,serif;font-size:clamp(36px,4.5vw,64px);line-height:1.05;font-weight:400;letter-spacing:-.045em;margin:13px 0 10px}.elements-heading h1 em{font-weight:400}.elements-heading p{font-size:12px;letter-spacing:.035em;color:#748078;margin:0}
-.elements-landscape{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;flex:1;min-height:300px;max-width:1500px;width:100%;margin:auto}
-.element{position:relative;isolation:isolate;overflow:hidden;color:#f4f4eb;text-decoration:none;display:flex;flex-direction:column;justify-content:space-between;padding:26px clamp(20px,2.8vw,44px) 32px;-webkit-tap-highlight-color:transparent;transform:translateZ(0)}
-.element:first-child{border-radius:46% 46% 3px 3px / 24% 24% 3px 3px}.element:nth-child(2){border-radius:3px}.element:last-child{border-radius:3px 3px 46% 46% / 3px 3px 24% 24%;padding-bottom:55px}
-.element:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#102d3010 35%,#13282d85);pointer-events:none}.element-ice:after{background:linear-gradient(180deg,transparent 30%,#32413f50)}
-.element:focus-visible{outline:3px solid #314c43;outline-offset:4px}.phase{font-size:9px;letter-spacing:.2em;opacity:.8;align-self:center}.element-label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:Georgia,serif;font-size:clamp(32px,3.5vw,52px);font-weight:400;letter-spacing:-.035em;text-shadow:0 1px 16px #10222620}.element-label small{display:block;font:11px Arial,sans-serif;letter-spacing:.035em;margin-top:11px;opacity:.82}.enter{font:22px Arial,sans-serif;opacity:.7;transition:transform .6s,opacity .6s}.element:hover .enter{transform:translate(3px,-3px);opacity:1}
-.material{position:absolute;inset:-2%;z-index:-2;overflow:hidden;transition:transform 1.8s cubic-bezier(.2,.6,.2,1),filter 1.8s}.element:hover .material{transform:scale(1.045);filter:brightness(1.06)}
-.water-material{background:linear-gradient(180deg,#26564f25,#063c4625),url('/images/water-sunlight.png') center/cover;filter:saturate(.65)}.water-material i{position:absolute;left:50%;top:49%;width:90px;height:90px;border:1px solid #e5f6e14d;border-radius:48% 52% 49% 51%;box-shadow:0 1px 6px #e0ffff20;animation:entry-ripple 10s linear infinite}.water-material i:nth-child(2){animation-delay:-3.3s}.water-material i:nth-child(3){animation-delay:-6.6s}
-.ice-material{background:radial-gradient(ellipse at 20% 25%,#f5f5efdc,transparent 60%),radial-gradient(ellipse at 75% 60%,#f7f7ee80,transparent 45%),linear-gradient(145deg,#c8cfcb,#adb9b7 55%,#e0e3dc)}.ice-veins{position:absolute;width:100%;height:100%;inset:0}.ice-veins path{fill:none;stroke-linejoin:round}.fracture-shadow{stroke:#536663;stroke-width:3;opacity:.2}.fracture-light{stroke:#fafbf4;stroke-width:1.4;opacity:.8}
-.steam-material{background:linear-gradient(180deg,#e8e5db15,#26353010),url('/images/fog-window.png') center/cover;filter:saturate(.15)}.steam-material i{position:absolute;inset:-35%;background:radial-gradient(ellipse at 40% 35%,#f1f1e680,transparent 55%);filter:blur(24px);animation:entry-mist 18s ease-in-out infinite alternate}.steam-material i:nth-child(2){animation-delay:-9s;opacity:.6}.steam-material i:nth-child(3){inset:0 40% 0 58%;background:linear-gradient(transparent,#f0f2e850,transparent);filter:blur(1px);animation:entry-drop 14s ease-in infinite}
-.elements-footer{display:flex;justify-content:space-between;gap:16px;max-width:1500px;width:100%;margin:20px auto 0;font:italic 12px Georgia,serif;color:#748078}.elements-footer span:last-child{font:8px Arial,sans-serif;letter-spacing:.2em}
-@keyframes entry-ripple{0%{transform:scale(.3);opacity:0}20%{opacity:.5}100%{transform:scale(5);opacity:0}}@keyframes entry-mist{from{translate:-6% -4%}to{translate:8% 9%}}@keyframes entry-drop{0%,30%{transform:translateY(-100%);opacity:0}40%{opacity:.35}100%{transform:translateY(100%);opacity:0}}
-@media(max-width:650px){.elements{min-height:720px;padding:24px 18px max(18px,env(safe-area-inset-bottom))}.elements-heading{padding-bottom:22px}.elements-heading h1{font-size:38px}.edition{font-size:8px}.elements-landscape{grid-template-columns:1fr;grid-template-rows:repeat(5,minmax(140px,1fr));gap:8px}.element{padding:18px 26px!important;border-radius:3px!important;flex-direction:row;align-items:center}.element:first-child{border-radius:55px 3px 3px 3px!important}.element:last-child{border-radius:3px 3px 55px 3px!important}.phase{position:absolute;top:17px;left:26px;font-size:8px}.element-label{width:100%;font-size:32px;margin-top:18px}.element-label small{margin-top:5px;font-size:10px}.water-material{background-position:center 50%}.ice-veins{transform:rotate(-25deg) scale(1.4)}.elements-footer{margin-top:16px}.elements-footer span:last-child{font-size:7px}.element:after{background:linear-gradient(90deg,#142d3655,transparent)}}
-@media(prefers-reduced-motion:reduce){.material,.material i,.enter{animation:none!important;transition:none!important}}
-/* Keep every entrance reachable on short screens, including landscape phones. */
-.elements{min-height:0;overflow-y:auto}.elements-landscape{flex-shrink:0}
-@media(max-width:650px){.elements-landscape{min-height:740px}}
+/* Home: five arched windows rising and falling like a horizon of dunes, with the title
+   resting in the open sky above the lower ones. */
+.elements{--paper:#f3f3f1;--ink:#151515;--muted:#7a7a7a;
+ position:relative;height:100%;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;padding:clamp(28px,6vh,56px) clamp(20px,6vw,88px) clamp(20px,4vh,36px);color:var(--ink);
+ background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .2 0 0 0 0 .2 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.18'/%3E%3C/svg%3E")}
+.elements-heading{position:absolute;inset:clamp(28px,6vh,56px) clamp(20px,6vw,88px) auto;display:flex;justify-content:space-between;align-items:flex-start;gap:32px;pointer-events:none;z-index:1}
+.elements-heading h1{margin:0;font:400 clamp(40px,5.6vw,76px)/.95 Georgia,"Times New Roman",serif;letter-spacing:-.035em}
+.elements-heading h1 em{display:block;padding-left:.9em}
+.elements-landscape{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:end;gap:clamp(10px,1.8vw,26px)}
+.element{--h:70%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:14px;color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
+/* Low at the edges where the words rest, tallest at the centre. */
+.element-water{--h:54%;--delay:0s}.element-ice{--h:68%;--delay:-2.2s}.element-steam{--h:94%;--delay:-4.4s}.element-sand{--h:74%;--delay:-1.1s}.element-snow{--h:58%;--delay:-3.3s}
+.element .material{position:relative;overflow:hidden;height:calc(var(--h) - 40px);border-radius:999px 999px 14px 14px;box-shadow:inset 0 0 0 1px #0000001f;animation:breathe 9s ease-in-out var(--delay) infinite alternate;transition:transform 1s cubic-bezier(.2,.6,.2,1),filter 1s}
+.element:hover .material{transform:translateY(-8px);filter:brightness(1.05)}
+.element-name{display:flex;align-items:baseline;gap:10px;padding:0 4px;font:400 clamp(17px,1.6vw,22px) Georgia,serif;letter-spacing:-.01em}
+.element-name span{font:italic 12px Georgia,serif;color:var(--muted)}
+.element:focus-visible{outline:none}.element:focus-visible .material{outline:2px solid var(--ink);outline-offset:4px}
+@keyframes breathe{from{translate:0 0}to{translate:0 -7px}}
 
+/* Each material sits in an arched window. */
+.water-material{background:linear-gradient(180deg,#26564f25,#063c4625),url('/images/water-sunlight.png') center/cover;filter:saturate(.55)}
+.element:hover .water-material{filter:saturate(.55) brightness(1.04)}
+.ice-material{background:radial-gradient(ellipse at 20% 25%,#f5f5efdc,transparent 60%),radial-gradient(ellipse at 75% 60%,#f7f7ee80,transparent 45%),linear-gradient(145deg,#c8cfcb,#adb9b7 55%,#e0e3dc)}.ice-veins{position:absolute;width:100%;height:100%;inset:0}.ice-veins path{fill:none;stroke-linejoin:round}.fracture-shadow{stroke:#536663;stroke-width:3;opacity:.2}.fracture-light{stroke:#fafbf4;stroke-width:1.4;opacity:.8}
+.steam-material{background:linear-gradient(180deg,#e8e5db15,#26353010),url('/images/fog-window.png') center/cover;filter:saturate(.15)}
+.element:hover .steam-material{filter:saturate(.15) brightness(1.04)}
+.steam-material i{position:absolute;inset:-35%;background:radial-gradient(ellipse at 40% 35%,#f1f1e680,transparent 55%);filter:blur(24px);animation:entry-mist 18s ease-in-out infinite alternate}.steam-material i:nth-child(2){animation-delay:-9s;opacity:.6}.steam-material i:nth-child(3){inset:0 40% 0 58%;background:linear-gradient(transparent,#f0f2e850,transparent);filter:blur(1px);animation:entry-drop 14s ease-in infinite}
 .sand-material{background:radial-gradient(ellipse at 20% 30%,#edd09b 0%,#cea16a 32%,transparent 60%),radial-gradient(ellipse at 90% 80%,#f0d19c,transparent 55%),linear-gradient(140deg,#c69560,#926d47 65%,#d5ac74)}
-.element-sand:after{background:linear-gradient(180deg,transparent 45%,#53361970)}
-.snow-material{background:radial-gradient(ellipse at 20% 35%,white,transparent 65%),repeating-radial-gradient(circle at 65% 45%,#dfe6e8 0 .5px,#f6f8f7 1px 3px);}
+.snow-material{background:radial-gradient(ellipse at 20% 35%,white,transparent 65%),repeating-radial-gradient(circle at 65% 45%,#dfe6e8 0 .5px,#f6f8f7 1px 3px)}
 .snow-material i{position:absolute;left:28%;top:22%;width:24px;height:24px;background:url('/textures/snowflake-1.svg') center/contain no-repeat;animation:entry-snow 12s linear infinite}
 .snow-material i:nth-child(2){left:68%;top:46%;width:18px;height:18px;animation-delay:-4s}.snow-material i:nth-child(3){left:43%;top:65%;width:30px;height:30px;animation-delay:-8s}
-.element-snow{color:#455859}.element-snow:after{background:linear-gradient(180deg,transparent 50%,#d5dfdd65)}
+@keyframes entry-mist{from{translate:-6% -4%}to{translate:8% 9%}}@keyframes entry-drop{0%,30%{transform:translateY(-100%);opacity:0}40%{opacity:.35}100%{transform:translateY(100%);opacity:0}}
 @keyframes entry-snow{0%{transform:translate(0,-25px) rotate(0);opacity:0}20%,75%{opacity:.8}100%{transform:translate(12px,60px) rotate(65deg);opacity:0}}
-@media(min-width:651px){.element{padding-left:clamp(14px,1.8vw,30px);padding-right:clamp(14px,1.8vw,30px)}.element-label{font-size:clamp(26px,3vw,46px)}.phase{font-size:8px;letter-spacing:.12em}}
+
+
+/* Phones: a staggered two-column walk below the title, snow closing the page. */
+@media(max-width:650px){
+ .elements{height:100%;overflow-y:auto;padding:84px 18px max(28px,env(safe-area-inset-bottom))}
+ .elements-heading{position:static;flex-direction:column;gap:18px;margin-bottom:36px}
+ .elements-landscape{flex:none;grid-template-columns:1fr 1fr;align-items:start;gap:14px 12px}
+ .element{height:auto}.element .material{height:auto;aspect-ratio:3/4.4}
+ .element:nth-child(even){margin-top:64px}
+ .element:last-child{grid-column:1/-1;margin-top:8px}.element:last-child .material{aspect-ratio:16/8;border-radius:999px 999px 14px 14px}
+}
+@media(prefers-reduced-motion:reduce){.material,.material i{animation:none!important;transition:none!important}}

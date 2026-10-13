@@ -1,4 +1,4 @@
-# States of Water
+# Natural Effects
 ## An interactive study of natural materials
 
 What happens when a screen responds to your hand like water, ice, or a fogged window?
