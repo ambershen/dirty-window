@@ -81,7 +81,8 @@ button:hover { filter: brightness(1.1); }
 .scene-home { left: max(16px, env(safe-area-inset-left)); }
 .scene-chrome-toggle { left: calc(max(16px, env(safe-area-inset-left)) + 52px); }
 .scene-chrome-toggle:focus-visible { outline: 2px solid white; outline-offset: 3px; }
-body.ui-hidden .scene-chrome-toggle { left: max(16px, env(safe-area-inset-left)); opacity: .3; }
+/* Hidden means nothing on screen: the toggle itself only appears when the pointer reaches its corner, or on H. */
+body.ui-hidden .scene-chrome-toggle { left: max(16px, env(safe-area-inset-left)); opacity: 0; }
 body.ui-hidden .scene-chrome-toggle:focus-visible { opacity: 1; }
 @media (hover: hover) { body.ui-hidden .scene-chrome-toggle:hover { opacity: 1; } }
 body.ui-hidden :is(.scene-home, .sand-title, .material-switch, #sand-tools, #sand-hint, #sand-status,

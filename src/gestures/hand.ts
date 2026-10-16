@@ -20,6 +20,7 @@ export type GestureFeatures = {
   indexTipY: number   // 0..1 (screen space, index fingertip)
   width: number       // 0..1
   height: number      // 0..1
+  points: { x: number; y: number }[] // all 21 landmarks, mirrored like x/y (0..1 of the camera frame)
 }
 
 export class HandTracker {
@@ -42,7 +43,7 @@ export class HandTracker {
   private smoother: LandmarkSmoother
 
   // Initialize off-screen so we don't show a "hole" in the center before detection
-  features: GestureFeatures = { pinch: 0, pinchReach: 0, pinchX: -1, pinchY: -1, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
+  features: GestureFeatures = { pinch: 0, pinchReach: 0, pinchX: -1, pinchY: -1, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0, points: [] }
   hands: GestureFeatures[] = []
 
   constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string; inferenceWidth?: number; cameraDeviceId?: string; trackingConfidence?: number } = {}) {
@@ -243,7 +244,7 @@ function computeFeatures(lm: LM[], world?: LM[]): GestureFeatures {
   const pinchX = 1 - (thbTip.x + idxTip.x) / 2
   const pinchY = (thbTip.y + idxTip.y) / 2
 
-  return { pinch, pinchReach, pinchX, pinchY, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
+  return { pinch, pinchReach, pinchX, pinchY, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height, points: lm.map(p => ({ x: 1 - p.x, y: p.y })) }
 }
 
 function dist(a: LM, b: LM) { const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z; return Math.sqrt(dx*dx + dy*dy + dz*dz) }

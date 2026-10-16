@@ -68,7 +68,19 @@ export class FogCamera {
  private armedAt=0
  private sampleCapture=0
  private debug=new URLSearchParams(location.search).has('debug')?new CameraDebug():null
- constructor(private button:HTMLButtonElement,private draw:(x:number,y:number,now:number)=>void,private release:()=>void,private wipe:(x:number,y:number,radius:number,now:number)=>void){
+ /** The open palm's 21 landmarks in screen space (0..1) while it rests on or wipes the glass. */
+ palm:{x:number;y:number}[]|null=null
+ /** Which gesture this window answers to: an open palm pressing and wiping, or a pinch writing. */
+ effect:'palm'|'write'='palm'
+ /** Writing only: the pen is lifted, so the hand can move without leaving a line. */
+ penUp=false
+ /** Lift or lower the pen. Lifting ends the stroke at once, so the next word starts fresh. */
+ togglePen(){this.penUp=!this.penUp;if(this.penUp&&this.action==='write'){this.release();this.action='idle';this.candidate='idle';this.pending=0;this.pinched=false;this.position=null;this.velocity={x:0,y:0}}return this.penUp}
+ setEffect(effect:'palm'|'write'){this.effect=effect;this.penUp=false;if(this.action!=='idle'){this.release();this.action='idle';this.candidate='idle';this.pending=0;this.pinched=false;this.position=null;this.palm=null}}
+ private points:{x:number;y:number}[]=[]
+ private stillSince=0
+ private printed=false
+ constructor(private button:HTMLButtonElement,private draw:(x:number,y:number,now:number)=>void,private release:()=>void,private wipe:(x:number,y:number,radius:number,now:number)=>void,private print:(points:{x:number;y:number}[],now:number)=>void){
   this.video.muted=true;this.video.playsInline=true;this.video.className='fog-camera-video';document.body.append(this.video)
   this.cursor.className='fog-hand-cursor';this.cursor.hidden=true;document.body.append(this.cursor)
   this.message.className='fog-camera-message';this.message.setAttribute('role','status');this.message.hidden=true;document.body.append(this.message)
@@ -76,13 +88,13 @@ export class FogCamera {
   document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stop()})
   addEventListener('blur',()=>{this.pinched=false;this.release()})
  }
- stop(){this.epoch++;this.running=false;cancelAnimationFrame(this.raf);clearTimeout(this.inferTimer);if(this.videoCallback)this.video.cancelVideoFrameCallback?.(this.videoCallback);this.position=null;this.lastResult=0;this.velocity={x:0,y:0};this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.radius=0;this.release();this.tracker?.dispose();this.tracker=null;this.cursor.hidden=true;this.message.hidden=true;this.button.setAttribute('aria-pressed','false');this.button.setAttribute('aria-label','Enable finger drawing camera')}
+ stop(){this.epoch++;this.running=false;this.palm=null;cancelAnimationFrame(this.raf);clearTimeout(this.inferTimer);if(this.videoCallback)this.video.cancelVideoFrameCallback?.(this.videoCallback);this.position=null;this.lastResult=0;this.velocity={x:0,y:0};this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.radius=0;this.release();this.tracker?.dispose();this.tracker=null;this.cursor.hidden=true;this.message.hidden=true;this.button.setAttribute('aria-pressed','false');this.button.setAttribute('aria-label','Enable finger drawing camera')}
  private async start(){
   const epoch=++this.epoch
   // One hand: with numHands 2, MediaPipe reruns the slow palm detector on every frame while
   // only one hand is visible. 60 Hz halves the frame interval on cameras that support it, and a
   // lower tracking threshold keeps hold of a motion-blurred hand instead of re-detecting it.
-  const tracker=new HandTracker(this.video,{maxHz:60,numHands:1,minCutoff:18,beta:8,trackingConfidence:.3,wasmPath:'/vision',modelUrl:'/hand_landmarker.task'})
+  const tracker=new HandTracker(this.video,{maxHz:60,numHands:1,minCutoff:18,beta:8,trackingConfidence:.3,inferenceWidth:640,wasmPath:'/vision',modelUrl:'/hand_landmarker.task'})
   this.tracker=tracker;this.message.textContent='Starting camera…';this.message.hidden=false;this.button.setAttribute('aria-label','Cancel camera')
   try{
    if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera needs HTTPS and a browser with camera access.')
@@ -118,14 +130,16 @@ export class FogCamera {
      const pinchStart=hand.pinch>.72&&!hand.isFist&&hand.pinchReach>PINCH_REACH
      // While writing, a loosening pinch with the other fingers relaxed (an OK sign) also
      // passes the open-palm test; the pen keeps priority until the thumb clearly leaves.
-     const palm=hand.isOpenPalm&&!hand.isFist&&(!writing||hand.pinch<PINCH_OPEN)
-     const raw=settling&&!writing?'idle':palm?'wipe':writing?hand.pinch>PINCH_HOLD?'write':'idle':pinchStart?'write':'idle'
+     // Each effect listens for one gesture: the palm effect never writes, the writing effect never wipes.
+     const palm=this.effect==='palm'&&hand.isOpenPalm&&!hand.isFist&&(!writing||hand.pinch<PINCH_OPEN)
+     const pen=this.effect==='write'&&!this.penUp
+     const raw=settling&&!writing?'idle':palm?'wipe':!pen?'idle':writing?hand.pinch>PINCH_HOLD?'write':'idle':pinchStart?'write':'idle'
      this.debug?.gesture(hand.pinch,hand.pinchReach,hand.isFist,!!hand.isOpenPalm,this.action)
      if(raw===this.action)this.pending=0
      else{
       if(raw!==this.candidate){this.candidate=raw;this.pending=0}
       const needed=this.action==='wipe'?3:this.action==='write'?4:raw==='idle'?1:2
-      if(++this.pending>=needed){if(this.action==='write')this.debug?.ended(raw==='wipe'?'became wipe':`pinch opened (${hand.pinch.toFixed(2)})`);this.release();this.position=null;this.velocity={x:0,y:0};this.action=raw;this.pending=0}
+      if(++this.pending>=needed){if(this.action==='write')this.debug?.ended(raw==='wipe'?'became wipe':`pinch opened (${hand.pinch.toFixed(2)})`);this.release();this.position=null;this.velocity={x:0,y:0};this.action=raw;this.pending=0;this.stillSince=0;this.printed=false}
      }
      this.pinched=this.action==='write'
      const dt=Math.max(.008,(sampleTime-this.lastResult)/1000),wiping=this.action==='wipe'
@@ -139,6 +153,14 @@ export class FogCamera {
      const vx=(x-this.target.x)/dt,vy=(y-this.target.y)/dt
      this.velocity=this.position?{x:this.velocity.x*.5+vx*.5,y:this.velocity.y*.5+vy*.5}:{x:0,y:0}
      this.target={x,y};this.lastResult=sampleTime
+     const toScreen=(p:{x:number;y:number})=>({x:(p.x*this.video.videoWidth*scale-(this.video.videoWidth*scale-innerWidth)/2)/innerWidth,y:(p.y*this.video.videoHeight*scale-(this.video.videoHeight*scale-innerHeight)/2)/innerHeight})
+     this.points=hand.points.map(toScreen)
+     // A palm held still on the glass leaves a print of the whole hand; moving it again re-arms the print.
+     if(wiping){
+      const speed=Math.hypot(this.velocity.x,this.velocity.y)
+      if(speed<.12){if(!this.stillSince)this.stillSince=sampleTime;else if(!this.printed&&sampleTime-this.stillSince>350&&this.points.length===21){this.printed=true;this.print(this.points,now)}}
+      else if(speed>.3){this.stillSince=0;this.printed=false}
+     }
      const radius=Math.max(55,Math.min(160,hand.width*this.video.videoWidth*scale*.6))
      this.radius=this.radius?this.radius+(radius-this.radius)*.3:radius
     }
@@ -157,8 +179,11 @@ export class FogCamera {
     if(!this.position)this.position={x:tx,y:ty}
     else{this.position.x+=(tx-this.position.x)*blend;this.position.y+=(ty-this.position.y)*blend}
     const x=Math.max(0,Math.min(1,this.position.x)),y=Math.max(0,Math.min(1,this.position.y))
-    this.cursor.style.left=`${x*100}%`;this.cursor.style.top=`${y*100}%`;this.cursor.classList.toggle('drawing',this.pinched)
+    this.cursor.style.left=`${x*100}%`;this.cursor.style.top=`${y*100}%`;this.cursor.classList.toggle('drawing',this.pinched);this.cursor.classList.toggle('pen-up',this.effect==='write'&&this.penUp)
     this.cursor.classList.toggle('wiping',this.action==='wipe')
+    // The silhouette follows the same short prediction as the wipe, so it sits on the clearing.
+    const ox=this.position.x-this.target.x,oy=this.position.y-this.target.y
+    this.palm=this.action==='wipe'&&this.points.length===21?this.points.map(p=>({x:p.x+ox,y:p.y+oy})):null
     if(this.action==='wipe')this.wipe(x,y,this.radius,now)
     else if(this.action==='write'){
      // The pen may be lifting: pause without ending the stroke. If the pinch returns,
@@ -167,7 +192,7 @@ export class FogCamera {
     }else this.release()
    }else if(this.action!=='idle'&&now-this.lastSeen<DROPOUT_MS){
     // Brief detection dropout mid-stroke: hold the stroke open without drawing.
-   }else{if(this.action==='write')this.debug?.ended('lost hand');this.cursor.hidden=true;this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.position=null;this.radius=0;this.velocity={x:0,y:0};this.release()}
+   }else{if(this.action==='write')this.debug?.ended('lost hand');this.cursor.hidden=true;this.palm=null;this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.position=null;this.radius=0;this.velocity={x:0,y:0};this.release()}
    this.lastFrame=now;this.raf=requestAnimationFrame(this.frame)
   }catch{this.stop();this.message.textContent='Hand tracking stopped. Tap the camera button to retry.';this.message.hidden=false}
  }

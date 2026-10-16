@@ -3,7 +3,7 @@ import { SandSurface } from './effects/SandSurface'
 import { SnowSurface } from './effects/SnowSurface'
 import { GranularRenderer } from './effects/GranularRenderer'
 import { MaterialCamera } from './gestures/MaterialCamera'
-import { SandSound } from './audio/SandSound'
+import { MaterialSound } from './audio/MaterialSound'
 
 const snow = new URLSearchParams(location.search).get('mode') === 'snow'
 const name = snow ? 'Snow' : 'Sand'
@@ -15,7 +15,7 @@ document.getElementById('app')!.innerHTML = `
 <div class="sand-title"><span>NATURAL EFFECTS / STUDY ${snow ? '05' : '04'}</span><h1>${name}</h1></div>
 <a class="material-switch" href="/?mode=${snow ? 'sand' : 'snow'}">Explore ${snow ? 'Sand' : 'Snow'} ↗</a>
 <nav id="sand-tools" aria-label="${name} tools">
-${snow ? '<button id="snowfall" aria-pressed="false">Snowfall</button>' : '<button id="sand-sound" aria-label="Mute sand sound" aria-pressed="true">Sound</button>'}
+${snow ? '<button id="snowfall" aria-pressed="false">Snowfall</button>' : ''}<button id="sand-sound" aria-label="Mute ${name.toLowerCase()} sound" aria-pressed="true">Sound</button>
 <button id="sand-brush" aria-label="Use broad palm" aria-pressed="false">Palm</button>
 <button id="sand-camera" aria-label="Enable hand camera" aria-pressed="false">Camera</button>
 <button id="sand-reset" aria-label="${snow ? 'Restore fresh snow' : 'Smooth the sand'}">↺</button></nav>
@@ -25,7 +25,10 @@ const canvas = document.getElementById('sand') as HTMLCanvasElement
 const air = document.getElementById('material-air') as HTMLCanvasElement
 const airCtx = air.getContext('2d')!
 const renderer = new GranularRenderer(canvas)
-const sound = snow ? null : new SandSound()
+// Sand: one pour that follows speed. Snow: a soft swish while tracing and a crunch only while a held print deepens.
+const sound = new MaterialSound(snow
+  ? [{ file: 'snow-swish.mp3', from: 4, to: 30, lowpass: 2600 }, { file: 'snow-crunch.mp3', from: 6.2, to: 40, lowpass: 3200, restart: true }]
+  : [{ file: 'sand-pour.mp3', from: 8, to: 15, lowpass: 3600 }])
 let surface: SandSurface, width = innerWidth, height = innerHeight, broad = false, snowfall = false
 let last = performance.now(), dirty = true, settlingUntil = 0, hiddenHint = false
 const status = document.getElementById('sand-status')!
@@ -54,11 +57,10 @@ function resize() {
   const scale = Math.min(1, 560 / Math.max(width, height))
   const gw = Math.max(24, Math.round(width * scale)), gh = Math.max(24, Math.round(height * scale))
   surface = snow ? new SnowSurface(gw, gh) : new SandSurface(gw, gh)
-  contacts.clear(); sound?.quiet(); dirty = true; flakes.length = 0
+  contacts.clear(); sound.quiet(); dirty = true; flakes.length = 0
   if (snowfall) for (let i = 0; i < 90; i++) flakes.push(newFlake(true))
 }
 async function unlockSound() {
-  if (!sound) return
   try { await sound.unlock(); status.textContent = '' } catch { status.textContent = 'Sound unavailable · tap Sound to retry' }
 }
 function stamp(x: number, y: number, r: number, load: number, amount: number, motionX = 0, motionY = 0) {
@@ -88,8 +90,8 @@ function contact(id: number, x: number, y: number, radius: number, pen = 0, came
   }
   if (!hiddenHint) { hiddenHint = true; hint.classList.add('quiet') }
 }
-function release(id: number) { contacts.delete(id); if (!contacts.size) sound?.quiet() }
-function releaseAll() { contacts.clear(); sound?.quiet() }
+function release(id: number) { contacts.delete(id); if (!contacts.size) sound.quiet() }
+function releaseAll() { contacts.clear(); sound.quiet() }
 canvas.onpointerdown = e => {
   e.preventDefault(); canvas.setPointerCapture(e.pointerId); void unlockSound()
   contact(e.pointerId, e.clientX, e.clientY, broad ? 43 : 13, e.pointerType === 'pen' ? e.pressure : 0)
@@ -108,10 +110,10 @@ const cameraButton = document.getElementById('sand-camera') as HTMLButtonElement
 const camera = new MaterialCamera(cameraButton, p => contact(-100, p.x * width, p.y * height, p.radius, 0, true), () => release(-100))
 cameraButton.addEventListener('click', () => { void unlockSound() })
 const soundButton = document.getElementById('sand-sound')
-if (soundButton && sound) soundButton.onclick = () => {
+if (soundButton) soundButton.onclick = () => {
   if (status.textContent) { void unlockSound(); return }
   const enabled = sound.toggle(); soundButton.setAttribute('aria-pressed', String(enabled)); soundButton.textContent = enabled ? 'Sound' : 'Muted'
-  soundButton.setAttribute('aria-label', enabled ? 'Mute sand sound' : 'Enable sand sound'); if (enabled) void unlockSound()
+  soundButton.setAttribute('aria-label', enabled ? `Mute ${name.toLowerCase()} sound` : `Enable ${name.toLowerCase()} sound`); if (enabled) void unlockSound()
 }
 const fallButton = document.getElementById('snowfall')
 if (fallButton) fallButton.onclick = () => {
@@ -156,15 +158,19 @@ function drawAir(now: number, dt: number) {
 function frame(now: number) {
   const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now
   if (!document.hidden) {
-    let soundSpeed = 0, soundX = .5, soundBroad = false
+    let soundSpeed = 0, soundX = .5, soundBroad = false, pressing = 0, pressX = .5
     for (const [id, c] of contacts) {
       if (c.camera && now - c.lastSeen > 180) { release(id); continue }
       const still = now - c.lastMove > 85
-      if (still || c.speed < 18) { c.load = Math.min(1, c.load + dt * (snow ? .5 : .28)); stamp(c.x, c.y, c.radius, Math.max(c.load, c.pen), 1 - Math.exp(-dt * 14)) }
+      if (still || c.speed < 18) { if (c.load < 1) { pressing = Math.max(pressing, c.radius > 20 ? 1.25 : 1); pressX = c.x / width } c.load = Math.min(1, c.load + dt * (snow ? .5 : .28)); stamp(c.x, c.y, c.radius, Math.max(c.load, c.pen), 1 - Math.exp(-dt * 14)) }
       const speed = still ? 0 : c.speed
       if (speed > soundSpeed) { soundSpeed = speed; soundX = c.x / width; soundBroad = c.radius > 20 }
     }
-    sound?.motion(soundSpeed, soundX, soundBroad)
+    const moving = soundSpeed > 3
+    if (snow) {
+      sound.set(0, moving ? Math.min(.26, .02 + soundSpeed / 2600) * (soundBroad ? 1.2 : 1) : 0, soundX)
+      sound.set(1, pressing * .2, pressX)
+    } else sound.set(0, moving ? Math.min(.22, .022 + soundSpeed / 2200) * (soundBroad ? 1.3 : 1) : 0, soundX)
     if (dirty || now < settlingUntil || snowfall) {
       if (snowfall && surface instanceof SnowSurface) surface.cover(dt)
       surface.settle(dt); renderer.render(surface, width, height); dirty = false
@@ -178,4 +184,4 @@ canvas.addEventListener('webglcontextrestored', () => location.reload())
 resize(); requestAnimationFrame(frame)
 addEventListener('resize', resize); addEventListener('blur', releaseAll)
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else { last = performance.now(); dirty = true } })
-addEventListener('pagehide', () => { camera.stop(); sound?.dispose() })
+addEventListener('pagehide', () => { camera.stop(); sound.dispose() })

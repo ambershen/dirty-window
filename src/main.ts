@@ -16,7 +16,7 @@ const startup = startScene().then(() => {
   home.setAttribute('aria-label', 'Choose Water, Ice, Steam, Sand or Snow')
   home.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/></svg>'
   home.className = 'scene-home'
-  // Hides every scene's text and controls, e.g. for clean recordings; the toggle itself stays faintly visible.
+  // Hides every scene's text and controls, e.g. for clean recordings; the toggle itself shows only on hover or H.
   const chrome = document.createElement('button')
   chrome.className = 'scene-chrome-toggle'
   const eye = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'
@@ -27,6 +27,11 @@ const startup = startScene().then(() => {
     chrome.innerHTML = eye + (hidden ? '<path d="M4 4l16 16"/>' : '') + '</svg>'
   }
   chrome.onclick = () => setHidden(!document.body.classList.contains('ui-hidden'))
+  // H toggles too (the classic scene already uses H for its own panel).
+  if (mode !== 'classic') addEventListener('keydown', e => {
+    if (e.key.toLowerCase() !== 'h' || e.metaKey || e.ctrlKey || e.altKey || e.repeat || (e.target as HTMLElement).closest?.('input,select,textarea')) return
+    e.preventDefault(); setHidden(!document.body.classList.contains('ui-hidden'))
+  })
   setHidden(false)
   document.body.append(home, chrome)
 })

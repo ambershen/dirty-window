@@ -33,3 +33,5 @@ Playback uses short enveloped excerpts; rubbing is low-pass filtered at low volu
 - Download: https://cdn.freesound.org/previews/199/199332_2320755-hq.mp3
 
 A real recording of sand pouring onto sand, used as a granular movement stand-in. Playback is filtered and enveloped by contact speed and area, fades when movement stops, and supports mute. It is not a recording of this particular hand interaction or the Sahara.
+- snow-swish.mp3: Joseph SARDIN / BigSoundBank, On snow (walking on snow); CC0. Loop window 4–30 s, played while tracing. https://bigsoundbank.com/on-snow-s0208.html
+- snow-crunch.mp3: Joseph SARDIN / BigSoundBank, Footstep in the snow #2; CC0. Loop window from 6.2 s (a footstep onset), played while a held print deepens. https://bigsoundbank.com/footstep-in-the-snow-2-s2890.html

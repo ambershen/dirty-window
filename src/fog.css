@@ -14,3 +14,19 @@
 .fog-control-body select{width:100%;margin-top:8px;padding:6px;border:1px solid #697e7560;border-radius:6px;background:#ffffff80;color:inherit}.fog-control-body meter{display:block;width:100%;height:10px;margin-top:8px}
 /* The open settings panel can be taller than a short screen; let it scroll. */
 #fog-controls{max-height:calc(100vh - 88px);overflow-y:auto;overscroll-behavior:contain}
+/* Effect switch and the writing pen's state. */
+#fog-effect{display:grid;place-items:center}
+#fog-pen{position:fixed;left:20px;bottom:max(24px,env(safe-area-inset-bottom));z-index:5;padding:9px 15px;border:1px solid #f0ffff70;border-radius:22px;background:#eef4eac9;backdrop-filter:blur(10px);color:#35433e;font:12px system-ui;cursor:pointer}
+#fog-pen.lifted{background:#c9dcdf55;color:#42636d}
+.fog-hand-cursor.pen-up{background:none;border-style:dashed}
+body.ui-hidden #fog-pen{display:none}
+/* Toolbar brush size: a dot that shows the size, beside a short slider. */
+#fog-tools{align-items:center}
+#fog-size{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 12px;border:1px solid #f0ffff60;border-radius:22px;background:#c9dcdf55;backdrop-filter:blur(10px);color:#42636d}
+#fog-size span{width:24px;height:24px;display:grid;place-items:center}
+#fog-size span::before{content:'';width:var(--size,7px);height:var(--size,7px);max-width:24px;max-height:24px;border-radius:50%;background:currentColor;opacity:.7}
+#fog-size input{width:84px;accent-color:#527471;margin:0}
+#fog-drops{display:grid;place-items:center}
+#fog-drops[aria-pressed=true]{background:#eef4eac9}
+@media(max-width:480px){#fog-tools{left:12px;right:12px;justify-content:flex-end;gap:6px}#fog-size{padding:0 10px}#fog-size input{width:64px}#fog-tools button{width:40px;height:40px}}
+@media(max-width:480px){#fog-pen{bottom:calc(max(20px,env(safe-area-inset-bottom)) + 54px)}}

@@ -8,7 +8,7 @@ export class FogBreath {
  private devices=document.createElement('select')
  private meter=document.createElement('meter')
  private sensitivity=document.createElement('input')
- constructor(private button:HTMLButtonElement,private status:HTMLElement,private clear:(strength:number,now:number)=>void){
+ constructor(private button:HTMLButtonElement,private status:HTMLElement,private breathe:(strength:number,now:number)=>void){
   const micLabel=document.createElement('label');micLabel.textContent='Microphone';this.devices.setAttribute('aria-label','Breath microphone');micLabel.append(this.devices);button.before(micLabel)
   this.devices.add(new Option('System default',''))
   this.devices.onchange=()=>{if(this.stream){this.stop();void this.start()}}
@@ -18,9 +18,9 @@ export class FogBreath {
   addEventListener('pagehide',()=>this.stop())
   document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stop()})
  }
- stop(){this.epoch++;this.pending=false;cancelAnimationFrame(this.raf);this.stream?.getTracks().forEach(t=>t.stop());this.stream=null;void this.context?.close();this.context=null;this.button.setAttribute('aria-pressed','false');this.button.textContent='Enable breath · experimental';this.status.textContent='';this.meter.value=0}
+ stop(){this.epoch++;this.pending=false;cancelAnimationFrame(this.raf);this.stream?.getTracks().forEach(t=>t.stop());this.stream=null;void this.context?.close();this.context=null;this.button.setAttribute('aria-pressed','false');this.button.textContent='Breathe on the glass · mic';this.status.textContent='';this.meter.value=0}
  private async start(){
-  const epoch=++this.epoch;this.pending=true;this.button.textContent='Cancel microphone';this.status.textContent='Allow microphone access to try breath clearing.'
+  const epoch=++this.epoch;this.pending=true;this.button.textContent='Cancel microphone';this.status.textContent='Allow microphone access to breathe on the glass.'
   try{
    const context=new AudioContext();this.context=context;await context.resume()
    if(epoch!==this.epoch)return
@@ -59,7 +59,7 @@ export class FogBreath {
      this.meter.title=`Input: ${rms.toFixed(4)} · threshold: ${threshold.toFixed(4)}`
      duration=candidate?duration+dt:Math.max(0,duration-dt*3)
      if(rms<threshold*.7)noise+=(rms-noise)*.002
-     if(duration>.1){if(now-lastClear>80){this.clear(Math.min(1,(rms-threshold)/Math.max(.003,threshold*4)+.25),now);lastClear=now}this.status.textContent='Breath-like sound · clearing the centre'}
+     if(duration>.1){if(now-lastClear>80){this.breathe(Math.min(1,(rms-threshold)/Math.max(.003,threshold*4)+.25),now);lastClear=now}this.status.textContent='Breath-like sound · fogging the glass'}
      else this.status.textContent=rms<.0001?'No microphone signal · try another input above':'Microphone active · breathe toward the selected microphone'
     }
     this.raf=requestAnimationFrame(frame)
