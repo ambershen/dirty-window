@@ -11,6 +11,7 @@ export type GestureFeatures = {
   isIndexExtended: boolean
   isPointing: boolean // index finger extended, others curled
   isOpenPalm?: boolean // all five fingers spread
+  fingersOpen?: boolean // index to pinky extended, thumb anywhere
   isFist: boolean     // all fingers curled
   tiltX: number       // radians delta
   tiltY: number       // radians delta
@@ -211,10 +212,13 @@ function computeFeatures(lm: LM[], world?: LM[]): GestureFeatures {
   // Palm wiping must tolerate a relaxed thumb and a slightly angled hand.
   // Pinch already measures thumb separation; requiring the thumb to be a full
   // palm-length from the centre rejected ordinary open hands.
-  const isOpenPalm = !isFist && pinch < .62 &&
+  // Four fingers extended, whatever the thumb does: a flat hand wiping glass often rests the
+  // thumb beside the index. isOpenPalm also requires the thumb apart, to tell it from a pinch.
+  const fingersOpen = !isFist &&
     [[8,6],[12,10],[16,14],[20,18]].every(([tip,joint]) =>
       dist(lm[tip],wrist)>dist(lm[joint],wrist)*1.02 &&
       dist(lm[tip],palm)>handScale*.65)
+  const isOpenPalm = fingersOpen && pinch < .62
 
   // Tilt: use wrist→mid direction as palm normal proxy in screen space
   const dx = (mid.x - wrist.x)
@@ -244,7 +248,7 @@ function computeFeatures(lm: LM[], world?: LM[]): GestureFeatures {
   const pinchX = 1 - (thbTip.x + idxTip.x) / 2
   const pinchY = (thbTip.y + idxTip.y) / 2
 
-  return { pinch, pinchReach, pinchX, pinchY, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height, points: lm.map(p => ({ x: 1 - p.x, y: p.y })) }
+  return { pinch, pinchReach, pinchX, pinchY, openness, isOpenPalm, fingersOpen, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height, points: lm.map(p => ({ x: 1 - p.x, y: p.y })) }
 }
 
 function dist(a: LM, b: LM) { const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z; return Math.sqrt(dx*dx + dy*dy + dz*dz) }

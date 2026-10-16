@@ -4,8 +4,6 @@ import { HandTracker } from './hand'
 const PINCH_REACH=.65
 /** Once writing, the stroke continues while the pinch stays above this. */
 const PINCH_HOLD=.52
-/** While writing, a wipe needs the thumb and index clearly apart. */
-const PINCH_OPEN=.3
 /** How long a stroke survives the tracker losing the hand (fast strokes blur). */
 const DROPOUT_MS=320
 
@@ -22,7 +20,7 @@ class CameraDebug {
  show(video:HTMLVideoElement){this.video=video;document.body.append(this.el)}
  frame(now:number){this.frames.push(now)}
  private endings:string[]=[]
- gesture(pinch:number,reach:number,fist:boolean,palm:boolean,action:string){this.pose=`pinch ${pinch.toFixed(2)} (start >0.72, hold >${PINCH_HOLD})  reach ${reach.toFixed(2)} (start >${PINCH_REACH})\nfist ${fist?'yes':'no'}  palm ${palm?'yes':'no'}  → ${action}`}
+ gesture(pinch:number,reach:number,fist:boolean,palm:boolean,action:string,detail=''){this.pose=`${detail}\npinch ${pinch.toFixed(2)} (start >0.72, hold >${PINCH_HOLD})  reach ${reach.toFixed(2)} (start >${PINCH_REACH})\nfist ${fist?'yes':'no'}  palm ${palm?'yes':'no'}  → ${action}`}
  /** Why recent strokes ended, newest first. */
  ended(reason:string){this.endings.unshift(reason);this.endings.length=Math.min(this.endings.length,4)}
  sample(at:number,capture:number,inference:number){this.samples.push(at);this.inference=this.inference*.8+inference*.2;if(capture)this.delay=this.delay*.8+(at-capture)*.2}
@@ -124,17 +122,18 @@ export class FogCamera {
      // A writing pinch curls the other fingers, which can read as a fist, so the fist
      // check only guards the start of a stroke.
      const writing=this.action==='write'
-     // Ignore gestures just after the camera starts, and hands filling much of the frame:
-     // both are usually a hand reaching for the keyboard or trackpad, not one at the glass.
-     const settling=now<this.armedAt||hand.width>.5||hand.height>.6
+     // Ignore gestures just after the camera starts.
+     // A hand filling much of the frame is usually reaching for the keyboard, but a palm pressed
+     // to the glass is close to the camera by nature, so the size check only guards writing.
+     const tooBig=hand.width>.5||hand.height>.6
+     const settling=now<this.armedAt||(this.effect==='write'&&tooBig)
      const pinchStart=hand.pinch>.72&&!hand.isFist&&hand.pinchReach>PINCH_REACH
-     // While writing, a loosening pinch with the other fingers relaxed (an OK sign) also
-     // passes the open-palm test; the pen keeps priority until the thumb clearly leaves.
      // Each effect listens for one gesture: the palm effect never writes, the writing effect never wipes.
-     const palm=this.effect==='palm'&&hand.isOpenPalm&&!hand.isFist&&(!writing||hand.pinch<PINCH_OPEN)
+     // The palm effect never writes, so the thumb may rest anywhere.
+     const palm=this.effect==='palm'&&!!hand.fingersOpen
      const pen=this.effect==='write'&&!this.penUp
      const raw=settling&&!writing?'idle':palm?'wipe':!pen?'idle':writing?hand.pinch>PINCH_HOLD?'write':'idle':pinchStart?'write':'idle'
-     this.debug?.gesture(hand.pinch,hand.pinchReach,hand.isFist,!!hand.isOpenPalm,this.action)
+     this.debug?.gesture(hand.pinch,hand.pinchReach,hand.isFist,!!hand.isOpenPalm,this.action,`${this.effect}  hand ${hand.width.toFixed(2)}×${hand.height.toFixed(2)}  fingers open ${hand.fingersOpen?'yes':'no'}${now<this.armedAt?'  (starting up)':this.effect==='write'&&tooBig?'  (too close, ignored)':''}`)
      if(raw===this.action)this.pending=0
      else{
       if(raw!==this.candidate){this.candidate=raw;this.pending=0}
