@@ -2,6 +2,12 @@ import { HandTracker } from './hand'
 
 /** Thumb and index must meet at least this far from the palm centre (in palm lengths) to start writing. */
 const PINCH_REACH=.65
+/** Once writing, the stroke continues while the pinch stays above this. */
+const PINCH_HOLD=.52
+/** While writing, a wipe needs the thumb and index clearly apart. */
+const PINCH_OPEN=.3
+/** How long a stroke survives the tracker losing the hand (fast strokes blur). */
+const DROPOUT_MS=320
 
 /** `?debug` readout: camera frame rate, tracking rate, inference time and capture-to-sample delay. */
 class CameraDebug {
@@ -15,7 +21,10 @@ class CameraDebug {
  constructor(){this.el.style.cssText='position:fixed;right:16px;top:16px;z-index:2000;margin:0;padding:10px 12px;border-radius:10px;background:#000a;color:#bfffd0;font:11px/1.6 ui-monospace,monospace;pointer-events:none';setInterval(()=>this.render(),500)}
  show(video:HTMLVideoElement){this.video=video;document.body.append(this.el)}
  frame(now:number){this.frames.push(now)}
- gesture(pinch:number,reach:number,fist:boolean,palm:boolean,action:string){this.pose=`pinch ${pinch.toFixed(2)} (start >0.72)  reach ${reach.toFixed(2)} (start >${PINCH_REACH})\nfist ${fist?'yes':'no'}  palm ${palm?'yes':'no'}  → ${action}`}
+ private endings:string[]=[]
+ gesture(pinch:number,reach:number,fist:boolean,palm:boolean,action:string){this.pose=`pinch ${pinch.toFixed(2)} (start >0.72, hold >${PINCH_HOLD})  reach ${reach.toFixed(2)} (start >${PINCH_REACH})\nfist ${fist?'yes':'no'}  palm ${palm?'yes':'no'}  → ${action}`}
+ /** Why recent strokes ended, newest first. */
+ ended(reason:string){this.endings.unshift(reason);this.endings.length=Math.min(this.endings.length,4)}
  sample(at:number,capture:number,inference:number){this.samples.push(at);this.inference=this.inference*.8+inference*.2;if(capture)this.delay=this.delay*.8+(at-capture)*.2}
  private render(){
   if(!this.video)return
@@ -27,7 +36,8 @@ frames  ${rate(this.frames)} /s
 tracked ${rate(this.samples)} /s
 infer   ${this.inference.toFixed(1)} ms
 capture→tracked ${this.delay?this.delay.toFixed(0)+' ms':'n/a (browser gives no capture time)'}
-${this.pose}`
+${this.pose}
+stroke ended: ${this.endings.join(' · ')||'—'}`
  }
 }
 
@@ -95,7 +105,7 @@ export class FogCamera {
    const hand=this.position?tracked.reduce((best,h)=>!best||Math.hypot(h.indexTipX-this.target.x,h.indexTipY-this.target.y)<Math.hypot(best.indexTipX-this.target.x,best.indexTipY-this.target.y)?h:best,tracked[0]):tracked[0]
    const sampleTime=this.tracker.resultTime
    if(hand&&now-sampleTime<150){
-    this.lastSeen=now;this.cursor.hidden=false
+    const gap=now-this.lastSeen;this.lastSeen=now;this.cursor.hidden=false
     if(sampleTime!==this.lastResult){
      // Classify once per camera sample. Moving hands blur, so a few unclear samples must
      // not end a wipe or a written stroke; entering a wipe also needs two agreeing samples.
@@ -106,20 +116,25 @@ export class FogCamera {
      // both are usually a hand reaching for the keyboard or trackpad, not one at the glass.
      const settling=now<this.armedAt||hand.width>.5||hand.height>.6
      const pinchStart=hand.pinch>.72&&!hand.isFist&&hand.pinchReach>PINCH_REACH
-     const raw=settling?'idle':hand.isOpenPalm&&!hand.isFist?'wipe':writing?hand.pinch>.52?'write':'idle':pinchStart?'write':'idle'
+     // While writing, a loosening pinch with the other fingers relaxed (an OK sign) also
+     // passes the open-palm test; the pen keeps priority until the thumb clearly leaves.
+     const palm=hand.isOpenPalm&&!hand.isFist&&(!writing||hand.pinch<PINCH_OPEN)
+     const raw=settling&&!writing?'idle':palm?'wipe':writing?hand.pinch>PINCH_HOLD?'write':'idle':pinchStart?'write':'idle'
      this.debug?.gesture(hand.pinch,hand.pinchReach,hand.isFist,!!hand.isOpenPalm,this.action)
      if(raw===this.action)this.pending=0
      else{
       if(raw!==this.candidate){this.candidate=raw;this.pending=0}
       const needed=this.action==='wipe'?3:this.action==='write'?4:raw==='idle'?1:2
-      if(++this.pending>=needed){this.release();this.position=null;this.velocity={x:0,y:0};this.action=raw;this.pending=0}
+      if(++this.pending>=needed){if(this.action==='write')this.debug?.ended(raw==='wipe'?'became wipe':`pinch opened (${hand.pinch.toFixed(2)})`);this.release();this.position=null;this.velocity={x:0,y:0};this.action=raw;this.pending=0}
      }
      this.pinched=this.action==='write'
      const dt=Math.max(.008,(sampleTime-this.lastResult)/1000),wiping=this.action==='wipe'
      // Match the mirrored, aspect-preserving cover crop used by the fog canvas.
      const scale=Math.max(innerWidth/this.video.videoWidth,innerHeight/this.video.videoHeight)
-     const x=((wiping?hand.x:hand.indexTipX)*this.video.videoWidth*scale-(this.video.videoWidth*scale-innerWidth)/2)/innerWidth
-     const y=((wiping?hand.y:hand.indexTipY)*this.video.videoHeight*scale-(this.video.videoHeight*scale-innerHeight)/2)/innerHeight
+     const x=((wiping?hand.x:hand.pinchX)*this.video.videoWidth*scale-(this.video.videoWidth*scale-innerWidth)/2)/innerWidth
+     const y=((wiping?hand.y:hand.pinchY)*this.video.videoHeight*scale-(this.video.videoHeight*scale-innerHeight)/2)/innerHeight
+     // A hand found again far from where it was lost is a new stroke, not a straight line across.
+     if(gap>100&&this.action==='write'&&Math.hypot(x-this.target.x,y-this.target.y)>.1){this.release();this.position=null;this.debug?.ended('lost hand, found elsewhere')}
      // Smoothed velocity: raw differences between 60 Hz samples are noisy.
      const vx=(x-this.target.x)/dt,vy=(y-this.target.y)/dt
      this.velocity=this.position?{x:this.velocity.x*.5+vx*.5,y:this.velocity.y*.5+vy*.5}:{x:0,y:0}
@@ -150,9 +165,9 @@ export class FogCamera {
      // drawing resumes and the stroke bridges the gap instead of starting a new fragment.
      if(!(this.pending&&this.candidate!=='write'))this.draw(x,y,now)
     }else this.release()
-   }else if(this.action!=='idle'&&now-this.lastSeen<160){
+   }else if(this.action!=='idle'&&now-this.lastSeen<DROPOUT_MS){
     // Brief detection dropout mid-stroke: hold the stroke open without drawing.
-   }else{this.cursor.hidden=true;this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.position=null;this.radius=0;this.velocity={x:0,y:0};this.release()}
+   }else{if(this.action==='write')this.debug?.ended('lost hand');this.cursor.hidden=true;this.pinched=false;this.action='idle';this.candidate='idle';this.pending=0;this.position=null;this.radius=0;this.velocity={x:0,y:0};this.release()}
    this.lastFrame=now;this.raf=requestAnimationFrame(this.frame)
   }catch{this.stop();this.message.textContent='Hand tracking stopped. Tap the camera button to retry.';this.message.hidden=false}
  }

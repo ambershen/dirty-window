@@ -5,6 +5,8 @@ import { LandmarkSmoother } from './LandmarkSmoother'
 export type GestureFeatures = {
   pinch: number       // 0..1
   pinchReach: number  // where thumb and index meet, from the palm centre, in palm lengths
+  pinchX: number      // 0..1 (screen space, midway between thumb and index tips)
+  pinchY: number
   openness: number    // 0..1
   isIndexExtended: boolean
   isPointing: boolean // index finger extended, others curled
@@ -40,7 +42,7 @@ export class HandTracker {
   private smoother: LandmarkSmoother
 
   // Initialize off-screen so we don't show a "hole" in the center before detection
-  features: GestureFeatures = { pinch: 0, pinchReach: 0, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
+  features: GestureFeatures = { pinch: 0, pinchReach: 0, pinchX: -1, pinchY: -1, openness: 0.5, isIndexExtended: false, isPointing: false, isFist: false, tiltX: 0, tiltY: 0, x: -1, y: -1, indexTipX: -1, indexTipY: -1, width: 0, height: 0 }
   hands: GestureFeatures[] = []
 
   constructor(videoEl: HTMLVideoElement, options: { maxHz?: number; numHands?: number; minCutoff?: number; beta?: number; wasmPath?: string; modelUrl?: string; inferenceWidth?: number; cameraDeviceId?: string; trackingConfidence?: number } = {}) {
@@ -149,7 +151,7 @@ export class HandTracker {
 
     const tSeconds = now / 1000
     this.hands = result.landmarks.map((lm, i) => {
-      const raw = computeFeatures(lm)
+      const raw = computeFeatures(lm, result.worldLandmarks?.[i])
       const smoothed = this.smoother.smooth(i, raw.indexTipX, raw.indexTipY, raw.x, raw.y, tSeconds)
       return { ...raw, indexTipX: smoothed.indexTipX, indexTipY: smoothed.indexTipY, x: smoothed.x, y: smoothed.y }
     })
@@ -161,7 +163,7 @@ export class HandTracker {
 type LM = { x: number; y: number; z: number }
 
 // Compute features from 21 hand landmarks
-function computeFeatures(lm: LM[]): GestureFeatures {
+function computeFeatures(lm: LM[], world?: LM[]): GestureFeatures {
   const idxTip = lm[8]
   const thbTip = lm[4]
   const wrist = lm[0]
@@ -169,9 +171,12 @@ function computeFeatures(lm: LM[]): GestureFeatures {
 
   const handScale = dist(wrist, mid)
 
-  // Pinch: normalized distance between thumb tip and index tip
-  const pinchDist = dist(thbTip, idxTip)
-  const pinch = clamp(1 - (pinchDist / (handScale * 1.5)), 0, 1)
+  // Pinch: normalized distance between thumb tip and index tip. World landmarks are a
+  // metric 3D estimate, so the reading holds steady while the hand turns and moves; the
+  // image landmarks' fingertip depth is noisy and flickers during fast strokes.
+  const pinchSpace = world && world.length === 21 ? world : lm
+  const pinchDist = dist(pinchSpace[4], pinchSpace[8])
+  const pinch = clamp(1 - (pinchDist / (dist(pinchSpace[0], pinchSpace[9]) * 1.5)), 0, 1)
 
   // A real pinch meets in front of the palm; in a fist the thumb rests on the curled index,
   // so the tips are also close together but sit over the palm.
@@ -233,7 +238,12 @@ function computeFeatures(lm: LM[]): GestureFeatures {
   const width = maxX - minX
   const height = maxY - minY
 
-  return { pinch, pinchReach, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
+  // The pen point is where thumb and index meet: steadier than the index tip alone,
+  // which swings as the pinch tightens or loosens.
+  const pinchX = 1 - (thbTip.x + idxTip.x) / 2
+  const pinchY = (thbTip.y + idxTip.y) / 2
+
+  return { pinch, pinchReach, pinchX, pinchY, openness, isOpenPalm, isIndexExtended: indexExtended && indexStraight, isPointing, isFist, tiltX: -dy * 0.5, tiltY: dx * 0.5, x, y, indexTipX, indexTipY, width, height }
 }
 
 function dist(a: LM, b: LM) { const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z; return Math.sqrt(dx*dx + dy*dy + dz*dz) }
