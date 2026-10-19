@@ -2,9 +2,10 @@ import { IceWriting } from './effects/IceWriting'
 import { IceSound } from './audio/IceSound'
 import { IceFractures } from './effects/IceFractures'
 import './ice.css'
+import { dock, guide, icon } from './ui/dock'
 
 const app = document.getElementById('app')!
-app.innerHTML = '<canvas id="ice" aria-label="Slide across the ice; hold a crack to fracture it"></canvas><div id="ice-tools"><button id="ice-sound" aria-label="Mute ice sound" aria-pressed="true">♫</button><button id="ice-reset" aria-label="Refreeze surface">❄</button></div>'
+app.innerHTML = `<canvas id="ice" aria-label="Slide across the ice; hold a crack to fracture it"></canvas><nav id="ice-tools" aria-label="Ice tools"><button id="ice-sound" aria-label="Mute ice sound" aria-pressed="true">${icon.sound}</button><button id="ice-reset" aria-label="Refreeze surface" data-key="R">${icon.reset}</button></nav>`
 const canvas = document.getElementById('ice') as HTMLCanvasElement
 const ctx = canvas.getContext('2d')!
 const surface = document.createElement('canvas'), frost = surface.getContext('2d')!
@@ -74,6 +75,8 @@ canvas.onpointermove = e => {
 function release(e: PointerEvent) { if(e.type==='pointerup')unlockSound(); hands.delete(e.pointerId); pinchDistance=null; fractures.release(e.pointerId); sound.release(e.pointerId) }
 canvas.onpointerup = canvas.onpointercancel = canvas.onlostpointercapture = release
 document.getElementById('ice-reset')!.onclick = reset
+guide(dock(document.getElementById('ice-tools')!), ['<b>Slide</b> across the ice to scratch it', '<b>Hold still</b> and it starts to crack', 'On touch, <b>squeeze two fingers</b> to stress it'])
+addEventListener('keydown', e => { if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) reset() })
 function frame(now: number) {
   const dt = Math.min(.04, (now - last) / 1000); last = now
   ctx.drawImage(surface, 0, 0, w, h)

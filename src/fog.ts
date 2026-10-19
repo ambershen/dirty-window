@@ -1,11 +1,12 @@
 import './fog.css'
 import { FogCamera } from './gestures/FogCamera'
 import { FogBreath } from './gestures/FogBreath'
+import { dock, guide, icon } from './ui/dock'
 const app=document.getElementById('app')!
-app.innerHTML='<canvas id="fog-window" aria-label="Before It Disappears — draw on the fogged window"></canvas><nav id="fog-tools"><label id="fog-size" title="Brush size · [ and ]"><span aria-hidden="true"></span><input id="fog-size-input" type="range" min="3" max="24" value="7" aria-label="Brush size"></label><button id="fog-effect" aria-label="Switch effect"></button><button id="fog-drops" aria-label="Water droplets" aria-pressed="false" title="Water droplets · D"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3.5C9.4 7.4 6.8 10.6 6.8 14a5.2 5.2 0 0 0 10.4 0c0-3.4-2.6-6.6-5.2-10.5Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button><button id="fog-camera" aria-label="Enable camera: pinch to write, open palm to wipe" aria-pressed="false">◎</button><button id="fog-photo" aria-label="Choose the view behind the glass">▧</button><button id="fog-reset" aria-label="Clear: fog the window again" title="Clear · R">↺</button></nav><input id="fog-file" type="file" accept="image/*" hidden><p id="fog-status" role="status"></p><button id="fog-pen" type="button" aria-pressed="false" hidden></button>'
+app.innerHTML=`<canvas id="fog-window" aria-label="Before It Disappears — draw on the fogged window"></canvas><nav id="fog-tools" aria-label="Window tools"><button id="fog-effect" aria-label="Switch effect"></button><button id="fog-camera" aria-label="Use your hand through the camera" aria-pressed="false">${icon.camera}</button><span class="dock-divider"></span><label id="fog-size" data-tip="Brush size" data-key="[ ]"><span aria-hidden="true"></span><input id="fog-size-input" type="range" min="3" max="24" value="7" aria-label="Brush size"></label><button id="fog-drops" aria-label="Water droplets" aria-pressed="false" data-key="D">${icon.drop}</button><button id="fog-photo" aria-label="Choose the view behind the glass">${icon.photo}</button><span class="dock-divider"></span><button id="fog-reset" aria-label="Fog the window again" data-key="R">${icon.reset}</button></nav><input id="fog-file" type="file" accept="image/*" hidden><p id="fog-status" role="status"></p><button id="fog-pen" type="button" aria-pressed="false" hidden></button>`
 const settings={dirty:1,temperature:50,hold:5,fade:30,brush:7}
 const controls=document.createElement('details');controls.id='fog-controls'
-controls.innerHTML='<summary>Temporary Canvas</summary><div class="fog-control-body"><p id="fog-hint"></p><label>Dirty Level <output id="fog-dirty-value">100%</output><input id="fog-dirty" type="range" min="0" max="100" value="100"></label><label>Temperature <output id="fog-temperature-value">50%</output><input id="fog-temperature" type="range" min="0" max="100" value="50"><span class="fog-temperature-scale">Cool · More fog <span>Warm · Lighter fog</span></span></label><label>Brush <output id="fog-brush-value">7</output><input id="fog-brush" type="range" min="3" max="24" value="7"></label><button id="fog-breath" type="button" aria-pressed="false">Breathe on the glass · mic</button><p id="fog-breath-status" role="status"></p><button id="fog-panel-reset" type="button">Reset Fog</button></div>'
+controls.innerHTML='<summary>Temporary Canvas</summary><div class="fog-control-body"><label>Dirty Level <output id="fog-dirty-value">100%</output><input id="fog-dirty" type="range" min="0" max="100" value="100"></label><label>Temperature <output id="fog-temperature-value">50%</output><input id="fog-temperature" type="range" min="0" max="100" value="50"><span class="fog-temperature-scale">Cool · More fog <span>Warm · Lighter fog</span></span></label><label>Brush <output id="fog-brush-value">7</output><input id="fog-brush" type="range" min="3" max="24" value="7"></label><button id="fog-breath" type="button" aria-pressed="false">Breathe on the glass · mic</button><p id="fog-breath-status" role="status"></p><button id="fog-panel-reset" type="button">Reset Fog</button></div>'
 app.append(controls)
 const canvas=document.getElementById('fog-window') as HTMLCanvasElement,ctx=canvas.getContext('2d')!
 function layer(){const c=document.createElement('canvas');return {c,g:c.getContext('2d')!}}
@@ -278,20 +279,23 @@ resize();addEventListener('resize',resize);addEventListener('blur',finishHands);
 
 // Two effects on one window: a palm pressed to the glass (wipe, print), or a pinch writing.
 // Space lifts and lowers the pen while writing, so words need not be one joined-up line.
-const effectButton=document.getElementById('fog-effect') as HTMLButtonElement,penButton=document.getElementById('fog-pen') as HTMLButtonElement,hint=document.getElementById('fog-hint')!
-const HAND_ICON='<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path d="M8 12V5.5a1.3 1.3 0 0 1 2.6 0V11M10.6 10V4.3a1.3 1.3 0 0 1 2.6 0V11M13.2 10.5V5.3a1.3 1.3 0 0 1 2.6 0V12M15.8 11V7.8a1.3 1.3 0 0 1 2.6 0v6.2c0 3.6-2.6 6.5-6.2 6.5-2.6 0-4.1-1.3-5.4-3.2L4.4 13.6a1.3 1.3 0 0 1 2.1-1.5L8 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-const PEN_ICON='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4.5 19.5l1-4.2L15.8 5a2 2 0 0 1 2.9 0l.3.3a2 2 0 0 1 0 2.9L8.7 18.5l-4.2 1ZM14 7l3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+const effectButton=document.getElementById('fog-effect') as HTMLButtonElement,penButton=document.getElementById('fog-pen') as HTMLButtonElement
 // Touch screens have no Space bar; the pen button itself is the switch there.
 const toggleWord=matchMedia('(pointer: coarse)').matches?'Tap':'Space'
+const howTo={
+ palm:['<b>Drag</b> with a fingertip, or turn on the <b>camera</b>','<b>Open palm</b> wipes · <b>hold it still</b> for a handprint','<b>Breathe</b> on the glass or press <b>R</b>: old marks return as ghosts'],
+ write:['<b>Pinch</b> thumb and index to write in the air',`<b>${toggleWord}</b> lifts and lowers the pen between words`,'<b>Breathe</b> on the glass or press <b>R</b>: old words return as ghosts'],
+}
+const fogGuide=guide(dock(document.getElementById('fog-tools')!),howTo.palm)
 function syncPen(){const up=camera.penUp;penButton.textContent=up?`Pen lifted · ${toggleWord} to write`:`Writing · ${toggleWord} to lift`;penButton.setAttribute('aria-pressed',String(!up));penButton.classList.toggle('lifted',up)}
 function setEffect(effect:'palm'|'write'){
  camera.setEffect(effect);finishHands()
- effectButton.innerHTML=effect==='palm'?HAND_ICON:PEN_ICON;effectButton.setAttribute('aria-label',effect==='palm'?'Palm effect · switch to writing':'Writing effect · switch to palm')
- hint.textContent=effect==='palm'?'Open palm to wipe · Hold it still to leave a handprint · Breathe to fog the glass':'Pinch to write · Space lifts and lowers the pen · Breathe to fog the glass'
+ effectButton.innerHTML=effect==='palm'?icon.palm:icon.pen;effectButton.setAttribute('aria-label',effect==='palm'?'Palm · switch to writing':'Writing · switch to palm')
+ fogGuide.set(howTo[effect])
  penButton.hidden=effect!=='write';syncPen()
  const url=new URL(location.href);url.searchParams.set('effect',effect);history.replaceState(null,'',url)
 }
-effectButton.onclick=()=>setEffect(camera.effect==='palm'?'write':'palm')
+effectButton.onclick=()=>{setEffect(camera.effect==='palm'?'write':'palm');fogGuide.show(9000)}
 penButton.onclick=()=>{camera.togglePen();syncPen()}
 // A focused button (often the camera button just pressed) would also take Space as a click,
 // so in writing mode Space belongs to the pen everywhere except text fields.

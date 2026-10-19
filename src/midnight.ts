@@ -6,6 +6,7 @@ import { WaterAudioInput } from './audio/WaterAudio'
 import { WaterSoundscape } from './audio/WaterSoundscape'
 import { PondTouch } from './gestures/PondTouch'
 import { BodyMotion } from './gestures/BodyMotion'
+import { dock, guide } from './ui/dock'
 
 type Point = { x: number; y: number }
 const app = document.getElementById('app')!
@@ -14,7 +15,7 @@ app.innerHTML = `
 <nav class="scene-tools" aria-label="Scene controls">
 <button id="frost-mode" aria-label="Frosted window mode" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3"/></svg></button>
 <button id="water-mode" aria-label="Water reflection mode" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 2C10 6 5 10 5 15a7 7 0 0 0 14 0c0-5-5-9-7-13Z"/><path d="M8 15c0 3 2 4 4 4"/></svg></button>
-<span class="tool-divider"></span>
+<span class="dock-divider"></span>
 <button id="speaker-toggle" data-water aria-label="Enable water sounds" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9H3ZM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/></svg></button>
 <button id="mic-toggle" data-water aria-label="Enable sound-reactive water" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8"/></svg></button>
 <button id="sound-preview" data-water aria-label="Preview a sound pulse"><svg viewBox="0 0 24 24"><path d="M3 10v4M7 6v12M12 3v18M17 6v12M21 10v4"/></svg></button>
@@ -22,7 +23,7 @@ app.innerHTML = `
 <button id="flip-camera" aria-label="Switch to front camera"><svg viewBox="0 0 24 24"><path d="M4 8a9 9 0 0 1 15-2l2 2M21 3v5h-5M20 16a9 9 0 0 1-15 2l-2-2M3 21v-5h5"/></svg></button>
 <button id="clear-source" aria-label="Return to plain pond"><svg viewBox="0 0 24 24"><path d="M4 9c4-5 12-5 16 0M4 14c4-5 12-5 16 0M4 19c4-5 12-5 16 0"/></svg></button>
 <button id="camera-toggle" aria-label="Open rear camera"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10 5-3v10l-5-3"/></svg></button>
-<button id="record-toggle" aria-label="Record scene">●</button>
+<button id="record-toggle" aria-label="Record scene"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6" fill="currentColor"/></svg></button>
 <button id="clear-drawing" aria-label="Reset frost"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v8M14 10v8"/></svg></button>
 <button id="fullscreen-toggle" aria-label="Enter fullscreen"><svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg></button>
 </nav><input id="photo-input" type="file" accept="image/*" hidden><p id="hint" class="sr-only" role="status"></p>`
@@ -49,6 +50,11 @@ video.style.cssText='position:fixed;width:1px;height:1px;opacity:0;pointer-event
 app.appendChild(video)
 const tracker = new HandTracker(video, { maxHz: 60, numHands: 1, minCutoff: 5, beta: 3 })
 const hint = document.getElementById('hint')!
+const howTo = {
+  water: ['<b>Touch and drag</b> to stir the water', '<b>Lift</b> your finger and let the ripples settle', 'Turn on the <b>mic</b> and sound moves the surface'],
+  frost: ['<b>Drag</b> to wipe the frost away', 'Turn on the <b>camera</b> to wipe with your hand', 'Switch to <b>water</b> for a reflective pond'],
+}
+const waterGuide = guide(dock(document.querySelector<HTMLElement>('.scene-tools')!), howTo.water)
 const cameraButton = document.getElementById('camera-toggle') as HTMLButtonElement
 const photoInput=document.getElementById('photo-input') as HTMLInputElement
 const photoButton=document.getElementById('photo-source') as HTMLButtonElement
@@ -168,6 +174,7 @@ function setMode(next: 'frost' | 'water') {
     document.getElementById('clear-drawing')!.setAttribute('aria-label',next==='frost'?'Reset frost':'Settle water')
     canvas.setAttribute('aria-label',next==='frost'?'Frosted window':'Sound-reactive water reflection')
     hint.textContent=next==='water'?'Water mode. Enable the microphone or preview a sound pulse.':'Frosted window mode.'
+    waterGuide.set(howTo[next])
   } catch(error){hint.textContent=error instanceof Error?error.message:String(error);waterButton.disabled=true}
 }
 frostButton.onclick=()=>setMode('frost')
@@ -221,7 +228,7 @@ recordButton.onclick=()=>{
     recordingStream=canvas.captureStream(30);recorder=new MediaRecorder(recordingStream);const chunks:BlobPart[]=[]
     recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)}
     recorder.onstop=()=>{clearTimeout(recordTimer);recordingStream?.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:recorder!.mimeType});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`dirty-window.${blob.type.includes('mp4')?'mp4':'webm'}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);recordButton.setAttribute('aria-label', 'Record scene');recordButton.setAttribute('aria-pressed','false');hint.textContent='Your silent scene recording is ready.'}
-    recorder.start();recordButton.setAttribute('aria-pressed','true');recordButton.setAttribute('aria-label', '■ Stop recording');hint.textContent='Recording the scene for up to 15 seconds. Microphone audio is not recorded.';recordTimer=setTimeout(()=>{if(recorder?.state==='recording')recorder.stop()},15000)
+    recorder.start();recordButton.setAttribute('aria-pressed','true');recordButton.setAttribute('aria-label', 'Stop recording');hint.textContent='Recording the scene for up to 15 seconds. Microphone audio is not recorded.';recordTimer=setTimeout(()=>{if(recorder?.state==='recording')recorder.stop()},15000)
   } catch(e){recordingStream?.getTracks().forEach(t=>t.stop());hint.textContent=`Recording unavailable: ${e instanceof Error?e.message:e}`}
 }
 // Match tracking coordinates to the camera image's cover crop.

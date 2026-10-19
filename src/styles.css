@@ -59,37 +59,102 @@ button:hover { filter: brightness(1.1); }
   display: none !important;
 }
 
-/* Scene chrome shared by every material: home link, hide-UI toggle, and the ui-hidden state. */
-.scene-home, .scene-chrome-toggle {
-  position: fixed;
-  top: max(16px, env(safe-area-inset-top));
-  z-index: 1000;
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border-radius: 50%;
-  color: white;
-  background: #23373755;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid #ffffff40;
-  cursor: pointer;
-  transition: opacity .4s;
+/* Scene chrome shared by every material: the material switcher, the hide-UI toggle, and the ui-hidden state. */
+.scene-chrome {
+  position: fixed; z-index: 1000;
+  top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left));
+  display: flex; align-items: flex-start; gap: 8px;
 }
-.scene-home { left: max(16px, env(safe-area-inset-left)); }
-.scene-chrome-toggle { left: calc(max(16px, env(safe-area-inset-left)) + 52px); }
-.scene-chrome-toggle:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.scene-home, .scene-chrome-toggle {
+  height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0;
+  border-radius: 22px; color: var(--dock-fg); background: var(--dock-bg);
+  backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--dock-line); box-shadow: 0 6px 22px var(--dock-shadow);
+  font: 400 16px/1 Georgia, "Times New Roman", serif; letter-spacing: -.01em; text-decoration: none;
+  cursor: pointer; transition: opacity .4s; filter: none;
+}
+.scene-home { padding: 0 14px 0 13px; }
+.scene-home:hover, .scene-chrome-toggle:hover { filter: none; background: var(--dock-bg); }
+.scene-home svg { flex-shrink: 0; opacity: .8; }
+.scene-home .chevron { margin-left: -2px; opacity: .55; transition: transform .25s; }
+.scene-home[aria-expanded=true] .chevron { transform: rotate(180deg); }
+.scene-home:focus-visible, .scene-chrome-toggle:focus-visible { outline: 2px solid var(--dock-fg); outline-offset: 3px; }
+/* The material menu: five studies like a table of contents, and the way back to the landing page. */
+.material-menu {
+  position: fixed; z-index: 1001; top: calc(max(16px, env(safe-area-inset-top)) + 52px); left: max(16px, env(safe-area-inset-left));
+  min-width: 236px; margin: 0; padding: 6px; list-style: none; border-radius: 16px;
+  background: var(--guide-bg); color: var(--guide-fg); border: 1px solid var(--dock-line);
+  backdrop-filter: blur(20px) saturate(1.2); -webkit-backdrop-filter: blur(20px) saturate(1.2); box-shadow: 0 14px 40px var(--dock-shadow);
+  opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .2s, transform .2s;
+}
+.material-menu.open { opacity: 1; transform: none; pointer-events: auto; }
+.material-menu a { display: grid; grid-template-columns: 26px 1fr auto; align-items: baseline; gap: 8px; padding: 9px 12px; border-radius: 11px; color: inherit; text-decoration: none; }
+.material-menu a:hover, .material-menu a:focus-visible { background: var(--dock-hover); outline: none; }
+.material-menu a[aria-current=page] { background: var(--dock-on-bg); color: var(--dock-on-fg); }
+.material-menu small { font: 500 10px system-ui, sans-serif; letter-spacing: .12em; opacity: .6; }
+.material-menu b { font: 400 18px/1.1 Georgia, serif; letter-spacing: -.01em; }
+.material-menu b em { margin-left: 7px; font-size: 12px; opacity: .65; }
+.material-menu kbd { font: 500 10px system-ui, sans-serif; opacity: .45; }
+.material-menu .menu-home { grid-template-columns: 1fr; margin-top: 4px; border-top: 1px solid var(--dock-line); border-radius: 0 0 11px 11px; font: 500 10.5px system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
 /* Hidden means nothing on screen: the toggle itself only appears when the pointer reaches its corner, or on H. */
-body.ui-hidden .scene-chrome-toggle { left: max(16px, env(safe-area-inset-left)); opacity: 0; }
+body.ui-hidden .scene-home, body.ui-hidden .material-menu { display: none; }
+body.ui-hidden .scene-chrome-toggle { opacity: 0; }
 body.ui-hidden .scene-chrome-toggle:focus-visible { opacity: 1; }
 @media (hover: hover) { body.ui-hidden .scene-chrome-toggle:hover { opacity: 1; } }
 body.ui-hidden :is(.scene-home, .sand-title, .material-switch, #sand-tools, #sand-hint, #sand-status,
   .material-camera-preview, .material-camera-status, .material-camera-devices, #ice-tools, #ice-hint,
-  #fog-tools, #fog-controls, .fog-camera-message, .scene-tools, .tui-panel, .tui-tab) {
+  #fog-tools, #fog-controls, #fog-pen, .fog-camera-message, .scene-tools, .tui-panel, .tui-tab,
+  .dock, .dock-guide, .dock-tip) {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transition: opacity .4s, visibility 0s .4s;
 }
+
+/* Scene dock: one toolbar style for every material. Each scene tunes the --dock-* colours to its surface. */
+:root {
+  --dock-bg: #f5f6f3b3; --dock-fg: #3a4743; --dock-line: #24343024; --dock-hover: #ffffff8c;
+  --dock-on-bg: #3f5551; --dock-on-fg: #f5f6f3; --dock-shadow: #18242014;
+  --tip-bg: #1d2826e0; --tip-fg: #f2f4f0; --guide-bg: #f7f8f5c4; --guide-fg: #34413d;
+}
+.dock {
+  position: fixed; z-index: 20; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); right: auto; top: auto;
+  transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 5px;
+  max-width: calc(100vw - 24px); overflow-x: auto; scrollbar-width: none;
+  border: 1px solid var(--dock-line); border-radius: 18px; background: var(--dock-bg); color: var(--dock-fg);
+  backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 8px 28px var(--dock-shadow); transition: opacity .4s;
+}
+.dock::-webkit-scrollbar { display: none; }
+.dock button {
+  flex-shrink: 0; display: grid; place-items: center; width: 40px; height: 40px; min-width: 0; padding: 0; margin: 0;
+  border: 0; border-radius: 13px; background: transparent; color: inherit; font: inherit; cursor: pointer;
+  box-shadow: none; filter: none; transition: background .2s, color .2s; touch-action: manipulation;
+}
+.dock button:hover { background: var(--dock-hover); filter: none; }
+.dock button[aria-pressed=true] { background: var(--dock-on-bg); color: var(--dock-on-fg); }
+.dock button:focus-visible { outline: 2px solid var(--dock-fg); outline-offset: -2px; }
+.dock svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.dock-divider { flex-shrink: 0; width: 1px; height: 20px; margin: 0 4px; background: var(--dock-line); }
+.dock-tip {
+  position: fixed; z-index: 1100; transform: translate(-50%, -100%) translateY(4px); padding: 5px 10px; border-radius: 8px;
+  background: var(--tip-bg); color: var(--tip-fg); font: 500 11.5px/1.3 system-ui, sans-serif; letter-spacing: .01em;
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .18s, transform .18s;
+}
+.dock-tip.shown { opacity: 1; transform: translate(-50%, -100%); }
+.dock-guide {
+  position: fixed; z-index: 19; left: 50%; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 64px);
+  width: max-content; max-width: min(380px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 14px;
+  background: var(--guide-bg); color: var(--guide-fg); border: 1px solid var(--dock-line);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  font: 12.5px/1.55 system-ui, sans-serif; text-align: center; pointer-events: none;
+  opacity: 0; transform: translate(-50%, 6px); transition: opacity .6s, transform .6s;
+}
+.dock-guide.shown { opacity: 1; transform: translate(-50%, 0); }
+.dock-guide p { margin: 0; }
+.dock-guide p + p { margin-top: 2px; }
+.dock-guide b { font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .dock-tip, .dock-guide { transition: none; } }
+/* A control's tooltip takes the place of the how-to card while it is showing. */
+.dock-tipping .dock-guide.shown { opacity: 0; }
+@media (pointer: coarse) { .material-menu kbd { display: none; } }

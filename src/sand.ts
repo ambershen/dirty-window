@@ -4,6 +4,7 @@ import { SnowSurface } from './effects/SnowSurface'
 import { GranularRenderer } from './effects/GranularRenderer'
 import { MaterialCamera } from './gestures/MaterialCamera'
 import { MaterialSound } from './audio/MaterialSound'
+import { dock, guide, icon } from './ui/dock'
 
 const snow = new URLSearchParams(location.search).get('mode') === 'snow'
 const name = snow ? 'Snow' : 'Sand'
@@ -13,13 +14,11 @@ document.getElementById('app')!.innerHTML = `
 <canvas id="sand" aria-label="Interactive ${name.toLowerCase()}: drag to trace${snow ? ', hold to press deeper' : ''}"></canvas>
 <canvas id="material-air" aria-hidden="true"></canvas>
 <div class="sand-title"><span>NATURAL EFFECTS / STUDY ${snow ? '05' : '04'}</span><h1>${name}</h1></div>
-<a class="material-switch" href="/?mode=${snow ? 'sand' : 'snow'}">Explore ${snow ? 'Sand' : 'Snow'} ↗</a>
 <nav id="sand-tools" aria-label="${name} tools">
-${snow ? '<button id="snowfall" aria-pressed="false">Snowfall</button>' : ''}<button id="sand-sound" aria-label="Mute ${name.toLowerCase()} sound" aria-pressed="true">Sound</button>
-<button id="sand-brush" aria-label="Use broad palm" aria-pressed="false">Palm</button>
-<button id="sand-camera" aria-label="Enable hand camera" aria-pressed="false">Camera</button>
-<button id="sand-reset" aria-label="${snow ? 'Restore fresh snow' : 'Smooth the sand'}">↺</button></nav>
-<p id="sand-hint">${snow ? 'Trace softly · hold to press deeper' : 'Trace the dunes · sweep with your palm'}</p>
+${snow ? `<button id="snowfall" aria-label="Let it snow" aria-pressed="false">${icon.snowflake}</button>` : ''}<button id="sand-sound" aria-label="Mute ${name.toLowerCase()} sound" aria-pressed="true">${icon.sound}</button>
+<button id="sand-brush" aria-label="Use broad palm" aria-pressed="false" data-key="P">${icon.palm}</button>
+<button id="sand-camera" aria-label="Use your hand through the camera" aria-pressed="false">${icon.camera}</button>
+<span class="dock-divider"></span><button id="sand-reset" aria-label="${snow ? 'Restore fresh snow' : 'Smooth the sand'}" data-key="R">${icon.reset}</button></nav>
 <p id="sand-status" role="status"></p>`
 const canvas = document.getElementById('sand') as HTMLCanvasElement
 const air = document.getElementById('material-air') as HTMLCanvasElement
@@ -30,9 +29,8 @@ const sound = new MaterialSound(snow
   ? [{ file: 'snow-swish.mp3', from: 4, to: 30, lowpass: 2600 }, { file: 'snow-crunch.mp3', from: 6.2, to: 40, lowpass: 3200, restart: true }]
   : [{ file: 'sand-pour.mp3', from: 8, to: 15, lowpass: 3600 }])
 let surface: SandSurface, width = innerWidth, height = innerHeight, broad = false, snowfall = false
-let last = performance.now(), dirty = true, settlingUntil = 0, hiddenHint = false
+let last = performance.now(), dirty = true, settlingUntil = 0
 const status = document.getElementById('sand-status')!
-const hint = document.getElementById('sand-hint')!
 type Contact = { x: number; y: number; radius: number; load: number; pen: number; lastMove: number; lastSeen: number; speed: number; camera: boolean }
 const contacts = new Map<number, Contact>()
 type Flake = { x: number; y: number; z: number; speed: number; radius: number; phase: number; angle: number; spin: number; shape: number }
@@ -61,7 +59,7 @@ function resize() {
   if (snowfall) for (let i = 0; i < 90; i++) flakes.push(newFlake(true))
 }
 async function unlockSound() {
-  try { await sound.unlock(); status.textContent = '' } catch { status.textContent = 'Sound unavailable · tap Sound to retry' }
+  try { await sound.unlock(); status.textContent = '' } catch { status.textContent = 'Sound unavailable · tap the speaker to retry' }
 }
 function stamp(x: number, y: number, r: number, load: number, amount: number, motionX = 0, motionY = 0) {
   const scale = surface.width / width
@@ -88,7 +86,6 @@ function contact(id: number, x: number, y: number, radius: number, pen = 0, came
       old.x = x; old.y = y; old.lastMove = now
     }
   }
-  if (!hiddenHint) { hiddenHint = true; hint.classList.add('quiet') }
 }
 function release(id: number) { contacts.delete(id); if (!contacts.size) sound.quiet() }
 function releaseAll() { contacts.clear(); sound.quiet() }
@@ -103,7 +100,7 @@ canvas.onpointercancel = canvas.onlostpointercapture = e => release(e.pointerId)
 const brush = document.getElementById('sand-brush') as HTMLButtonElement
 brush.onclick = () => {
   broad = !broad; releaseAll(); brush.setAttribute('aria-pressed', String(broad))
-  brush.setAttribute('aria-label', broad ? 'Use fingertip' : 'Use broad palm'); brush.textContent = broad ? 'Finger' : 'Palm'
+  brush.setAttribute('aria-label', broad ? 'Use fingertip' : 'Use broad palm')
 }
 document.getElementById('sand-reset')!.onclick = () => { releaseAll(); surface.reset(); dirty = true }
 const cameraButton = document.getElementById('sand-camera') as HTMLButtonElement
@@ -112,12 +109,12 @@ cameraButton.addEventListener('click', () => { void unlockSound() })
 const soundButton = document.getElementById('sand-sound')
 if (soundButton) soundButton.onclick = () => {
   if (status.textContent) { void unlockSound(); return }
-  const enabled = sound.toggle(); soundButton.setAttribute('aria-pressed', String(enabled)); soundButton.textContent = enabled ? 'Sound' : 'Muted'
+  const enabled = sound.toggle(); soundButton.setAttribute('aria-pressed', String(enabled))
   soundButton.setAttribute('aria-label', enabled ? `Mute ${name.toLowerCase()} sound` : `Enable ${name.toLowerCase()} sound`); if (enabled) void unlockSound()
 }
 const fallButton = document.getElementById('snowfall')
 if (fallButton) fallButton.onclick = () => {
-  snowfall = !snowfall; fallButton.setAttribute('aria-pressed', String(snowfall)); fallButton.textContent = snowfall ? 'Snowing' : 'Snowfall'
+  snowfall = !snowfall; fallButton.setAttribute('aria-pressed', String(snowfall)); fallButton.setAttribute('aria-label', snowfall ? 'Stop the snowfall' : 'Let it snow')
   flakes.length = 0; if (snowfall) for (let i = 0; i < 90; i++) flakes.push(newFlake(true)); dirty = true
 }
 function drawAir(now: number, dt: number) {
@@ -185,3 +182,13 @@ resize(); requestAnimationFrame(frame)
 addEventListener('resize', resize); addEventListener('blur', releaseAll)
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else { last = performance.now(); dirty = true } })
 addEventListener('pagehide', () => { camera.stop(); sound.dispose() })
+guide(dock(document.getElementById('sand-tools')!), snow
+  ? ['<b>Trace softly</b> across the snow', '<b>Hold still</b> to press a deeper print', '<b>Let it snow</b> and fresh flakes cover your marks']
+  : ['<b>Trace</b> the dunes with a fingertip', '<b>Palm</b> sweeps a wide path', '<b>Hold still</b> to sink deeper into the sand'])
+// R smooths the surface again; P switches between fingertip and palm.
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
+  const key = e.key.toLowerCase()
+  if (key === 'r') document.getElementById('sand-reset')!.click()
+  else if (key === 'p') brush.click()
+})
