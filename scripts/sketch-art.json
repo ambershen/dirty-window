@@ -1,0 +1,159 @@
+[
+ {
+  "id": "venus",
+  "name": "Venus de Milo",
+  "after": "Alexandros of Antioch",
+  "crop": [
+   0.22,
+   0.04,
+   0.68,
+   0.93
+  ],
+  "low": 0.06,
+  "high": 0.16,
+  "blur": 2.2,
+  "budget": 2600,
+  "source": "File:Front views of the Venus de Milo.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Livioandronico2013"
+ },
+ {
+  "id": "mona",
+  "name": "Mona Lisa",
+  "after": "Leonardo da Vinci",
+  "crop": [
+   0.08,
+   0.04,
+   0.92,
+   0.9
+  ],
+  "low": 0.05,
+  "high": 0.14,
+  "blur": 2.4,
+  "budget": 2400,
+  "source": "File:Mona Lisa, by Leonardo da Vinci, from C2RMF retouched.jpg",
+  "license": "Public domain"
+ },
+ {
+  "id": "david",
+  "name": "David",
+  "after": "Michelangelo",
+  "crop": [
+   0.18,
+   0.04,
+   0.78,
+   0.97
+  ],
+  "low": 0.06,
+  "high": 0.16,
+  "blur": 2,
+  "budget": 2600,
+  "source": "File:Michelangelo's David 2015.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Livioandronico2013"
+ },
+ {
+  "id": "pearl",
+  "name": "Girl with a Pearl Earring",
+  "after": "Vermeer",
+  "crop": [
+   0.05,
+   0.03,
+   0.95,
+   0.97
+  ],
+  "low": 0.05,
+  "high": 0.14,
+  "blur": 2.4,
+  "budget": 2200,
+  "source": "File:1665 Girl with a Pearl Earring.jpg",
+  "license": "Public domain"
+ },
+ {
+  "id": "vitruvian",
+  "name": "Vitruvian Man",
+  "after": "Leonardo da Vinci",
+  "crop": [
+   0.1,
+   0.12,
+   0.9,
+   0.76
+  ],
+  "low": 0.08,
+  "high": 0.2,
+  "blur": 1.4,
+  "budget": 2800,
+  "source": "File:Da Vinci Vitruve Luc Viatour.jpg",
+  "license": "Public domain"
+ },
+ {
+  "id": "nike",
+  "name": "Winged Victory of Samothrace",
+  "after": "Hellenistic sculpture",
+  "crop": [
+   0.12,
+   0.02,
+   0.97,
+   0.9
+  ],
+  "low": 0.06,
+  "high": 0.16,
+  "blur": 2.2,
+  "budget": 2600,
+  "source": "File:Nike of Samothrake Louvre Ma2369 n4.jpg",
+  "license": "Public domain"
+ },
+ {
+  "id": "dancer",
+  "name": "Little Dancer Aged Fourteen",
+  "after": "Degas",
+  "crop": [
+   0.12,
+   0.03,
+   0.78,
+   0.86
+  ],
+  "low": 0.06,
+  "high": 0.16,
+  "blur": 2,
+  "budget": 2400,
+  "source": "File:Edgar Degas, Little Dancer Aged Fourteen, 1878-1881, NGA 110292.jpg",
+  "license": "CC0"
+ },
+ {
+  "id": "discobolus",
+  "name": "The Discus Thrower",
+  "after": "Myron",
+  "crop": [
+   0.1,
+   0.03,
+   0.94,
+   0.84
+  ],
+  "low": 0.06,
+  "high": 0.16,
+  "blur": 2.2,
+  "budget": 2400,
+  "source": "File:Discobolus in National Roman Museum Palazzo Massimo alle Terme.JPG",
+  "license": "CC BY-SA 4.0",
+  "author": "Livioandronico2013"
+ },
+ {
+  "id": "adam",
+  "name": "The Creation of Adam",
+  "after": "Michelangelo",
+  "crop": [
+   0,
+   0.06,
+   1,
+   0.62
+  ],
+  "low": 0.08,
+  "high": 0.2,
+  "blur": 2.6,
+  "budget": 2200,
+  "min": 22,
+  "source": "File:Creation of Adam (Michelangelo) Detail.jpg",
+  "license": "Public domain"
+ }
+]

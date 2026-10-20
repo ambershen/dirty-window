@@ -7,12 +7,14 @@ async function startScene() {
   if (mode === 'sand' || mode === 'snow') return await import('./sand')
   if (mode === 'projector') return await import('./projector')
   if (mode === 'vj') return await import('./vj')
+  // The sketch reference sheet is a working tool: served by the dev server, left out of the public build.
+  if (mode === 'sketches') { if (import.meta.env.DEV) return await import('./sketches'); return await import('./elements') }
   if (mode === 'td-controller') return await import('./td-controller')
   if (mode === 'classic') return await import('./classic')
   return await import('./midnight')
 }
 const startup = startScene().then(() => {
-  if (mode === 'home' || !mode || mode === 'projector' || mode === 'td-controller' || mode === 'vj') return
+  if (mode === 'home' || !mode || mode === 'projector' || mode === 'td-controller' || mode === 'vj' || mode === 'sketches') return
   // The material switcher: the current study's name; it opens the five studies and the way home.
   const current = currentMaterial(mode)
   const home = document.createElement('button')
