@@ -2,17 +2,14 @@ import './elements.css'
 import { MATERIALS } from './materials'
 import { HeroGlass, type HeroView } from './landing/heroGlass'
 import { WindowView, hourNow, type Hour } from './landing/windowView'
-import { WatercolourView } from './landing/watercolourView'
 import { RainView } from './landing/rainView'
 import { specimen } from './landing/specimens'
 
-// The view behind the hero's glass follows the visitor's hour: watercolour in daylight, the painted
-// landscape at dawn, dusk and night. ?time= previews an hour; ?hero=rain shows the rainy night.
-const HOURS: Hour[] = ['dawn', 'day', 'dusk', 'night']
-const HOUR_NAMES: Record<Hour, string> = { dawn: 'Dawn', day: 'Day', dusk: 'Dusk', night: 'Night' }
-const HOUR_LINES: Record<Hour, string> = { dawn: 'first light', day: 'watercolour, drying in daylight', dusk: 'dusk over the hills', night: 'night, moon over the lake' }
+// The view behind the hero's glass follows the visitor's hour: a painted landscape at dawn, by day,
+// at dusk and at night. ?time= forces an hour for testing; ?hero=rain shows the rainy night.
+const HOUR_LINES: Record<Hour, string> = { dawn: 'first light', day: 'daylight over the hills', dusk: 'dusk over the hills', night: 'night, moon over the lake' }
 const rainy = new URLSearchParams(location.search).get('hero') === 'rain'
-const viewFor = (hour: Hour): HeroView => rainy ? new RainView() : hour === 'day' ? new WatercolourView() : new WindowView(hour)
+const viewFor = (hour: Hour): HeroView => rainy ? new RainView() : new WindowView(hour)
 
 document.title = 'Natural Effects'
 
@@ -34,7 +31,7 @@ const effects = MATERIALS.map((m, i) => `
         <p class="effect-meta"><span>${number(i)}</span><span>${m.state}</span></p>
         <h3>${m.name}</h3>
         <p class="effect-note">${m.note}</p>
-        <dl class="specimen"><div><dt>Touch</dt><dd>${m.gestures}</dd></div><div><dt>Remembers</dt><dd>${m.memory}</dd></div></dl>
+        <dl class="specimen"><div><dt>Touch</dt><dd>${m.gestures}</dd></div><div><dt>Inspired by</dt><dd>${m.inspired}</dd></div></dl>
       </a></li>`).join('')
 
 document.getElementById('app')!.innerHTML = `
@@ -46,12 +43,15 @@ document.getElementById('app')!.innerHTML = `
 
   <section class="hero" aria-labelledby="hero-title">
     <h1 id="hero-title" class="sr-only">Natural Effects</h1>
-    <header class="hero-top">
-      <p class="hero-meta">Interactive natural materials<br><span id="hero-caption"></span></p>
-      <nav class="hero-views" aria-label="Preview the view at another hour">${HOURS.map(hour => `<button type="button" data-hour="${hour}">${HOUR_NAMES[hour]}</button>`).join('')}</nav>
-    </header>
     <div class="window" id="hero-window" aria-hidden="true"></div>
-    <p class="hero-hint" id="hero-hint">Draw on the glass · hold still to breathe</p>
+    <div class="hero-actions">
+      <a class="cta cta-primary" href="${MATERIALS[0].href}">Enter the playground <span aria-hidden="true">→</span></a>
+      <a class="cta" href="#skills">Get the Claude Code plugin</a>
+    </div>
+    <footer class="hero-caption">
+      <p class="hero-meta">Interactive natural materials · <span id="hero-caption"></span></p>
+      <p class="hero-hint" id="hero-hint">Draw on the glass · hold still to breathe</p>
+    </footer>
   </section>
 
   <section class="effects" id="effects" aria-labelledby="effects-title">
@@ -83,7 +83,7 @@ document.getElementById('app')!.innerHTML = `
           <button type="button" id="install-copy" aria-label="Copy install command">Copy</button>
         </div>
         <p class="install-note">Claude Code 2.1.275 or later. Skills are namespaced, e.g. <code>/natural-effects:simulate-natural-water</code>.</p>
-        <a class="skills-link" href="https://github.com/ambershen/natural-effect" target="_blank" rel="noopener">Read the skills on GitHub ↗</a>
+        <a class="cta" href="https://github.com/ambershen/natural-effect" target="_blank" rel="noopener">Read the skills on GitHub <span aria-hidden="true">↗</span></a>
       </div>
       <ol class="skill-list">${SKILLS.map(([name, about]) => `<li><code>${name}</code><span>${about}</span></li>`).join('')}</ol>
     </div>
@@ -96,21 +96,16 @@ document.getElementById('app')!.innerHTML = `
 </main>`
 
 // The hero is one fogged window; touching it retires the hint.
-const nowHour = hourNow()
-let shown = nowHour
-const hero = new HeroGlass(document.getElementById('hero-window')!, viewFor(nowHour))
-// The caption names the hour behind the glass; the switcher marks the visitor's own hour as now.
+let shown = hourNow()
+const hero = new HeroGlass(document.getElementById('hero-window')!, viewFor(shown))
+// The caption names the view at the visitor's hour; when the hour turns, the view behind the glass turns with it.
 const caption = document.getElementById('hero-caption')!
-const hourButtons = [...document.querySelectorAll<HTMLButtonElement>('.hero-views button')]
-const setCaption = () => {
-  caption.textContent = rainy ? 'Rain, after dark'
-    : shown === nowHour ? `The view at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · ${HOUR_LINES[shown]}`
-    : `Previewing ${HOUR_NAMES[shown].toLowerCase()} · ${HOUR_LINES[shown]}`
-  for (const b of hourButtons) { b.setAttribute('aria-pressed', String(b.dataset.hour === shown)); b.classList.toggle('now', b.dataset.hour === nowHour) }
+const tick = () => {
+  const hour = hourNow()
+  if (hour !== shown) { shown = hour; hero.setView(viewFor(hour)) }
+  caption.textContent = rainy ? 'rain, after dark' : `the view at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, ${HOUR_LINES[shown]}`
 }
-for (const b of hourButtons) b.onclick = () => { shown = b.dataset.hour as Hour; hero.setView(viewFor(shown)); setCaption() }
-if (rainy) document.querySelector<HTMLElement>('.hero-views')!.hidden = true
-setCaption(); setInterval(setCaption, 30000)
+tick(); setInterval(tick, 30000)
 hero.onFirstTouch = () => document.getElementById('hero-hint')!.classList.add('quiet')
 
 // Each effect plays its demo only while its card is on screen; reduced motion keeps the still.

@@ -12,7 +12,7 @@ type Palette = { sky: string[]; hills: string[]; lake: string[]; reeds: string; 
 const PALETTES: Record<Hour, Palette> = {
   dawn: { sky: ['#7f8fb2', '#b59cb6', '#e3a79c', '#f0c79c'], hills: ['#8f8aa3', '#62677f', '#3a4258'], lake: ['#d9ae9f', '#77768a', '#262d3d'], reeds: '#272e3a',
     sun: { x: .3, y: .53, r: .045, core: '#fff3e0', glow: '#fde6cfb0', streak: '#fbe3cc' }, clouds: '#fff4ee', veil: 'rgba(234,234,236,.6)', stars: false },
-  day: { sky: ['#9fbfd1', '#bcd3dc', '#dce6e2', '#eef0e4'], hills: ['#a3b6a8', '#71907f', '#43604f'], lake: ['#c7dbdc', '#7c9a98', '#2f4a48'], reeds: '#2a3d33',
+  day: { sky: ['#6f9bbb', '#93b8cc', '#c4d8dc', '#e6ece2'], hills: ['#8aa596', '#5c7f6c', '#36533f'], lake: ['#a9c8cf', '#5f8584', '#24403d'], reeds: '#2a3d33',
     sun: { x: .76, y: .2, r: .04, core: '#fffdf4', glow: '#fffbe680', streak: '#ffffff' }, clouds: '#ffffff', veil: 'rgba(236,239,236,.6)', stars: false },
   dusk: { sky: ['#9fb3b0', '#c9b7ae', '#df9f86', '#efc39c'], hills: ['#8e9c96', '#5f736d', '#34494a'], lake: ['#c99a85', '#6f7d78', '#25393a'], reeds: '#1f302f',
     sun: { x: .7, y: .5, r: .055, core: '#fbefd9', glow: '#fbe6c6c0', streak: '#f8dcb4' }, clouds: '#fff3ea', veil: 'rgba(234,237,233,.6)', stars: false },
@@ -34,7 +34,7 @@ export class WindowView implements HeroView {
   readonly veil: string
   private p: Palette
   private layers: HTMLCanvasElement[] = [] // sky, far hills, middle hills, near hills, lake
-  private paper = document.createElement('canvas') // the same paper the daytime watercolour is painted on
+  private paper = document.createElement('canvas') // fine paper grain, so the view reads as painted
   private w = 1; private h = 1; private dpr = 1
   private stars: { x: number; y: number; r: number; phase: number }[] = []
   private clouds = Array.from({ length: 5 }, (_, i) => ({ y: .1 + i * .07 + Math.random() * .03, x: Math.random(), len: .22 + Math.random() * .3, speed: .004 + Math.random() * .006, alpha: .14 + Math.random() * .12 }))
@@ -120,7 +120,7 @@ export class WindowView implements HeroView {
       g.fillRect(x - spread, y, spread * 2 * (.4 + .6 * flicker), 1.6)
     }
     g.restore()
-    // Painted on paper: the grain the daytime watercolour shares.
+    // Painted on paper: a fine grain over everything.
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'multiply'; g.drawImage(this.paper, 0, 0); g.globalCompositeOperation = 'source-over'
   }
 }

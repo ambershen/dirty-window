@@ -13,18 +13,19 @@
 .masthead-mark{font:italic 400 17px/1 var(--serif);letter-spacing:-.01em;text-transform:none}
 .masthead-links{display:flex;gap:clamp(14px,2.4vw,30px)}
 .masthead-links a{text-decoration:none;opacity:.7;transition:opacity .2s}.masthead-links a:hover{opacity:1}
-.masthead-enter{opacity:1!important;border-bottom:1px solid currentColor;padding-bottom:3px}
 
 /* Hero: one fogged window over the five studies. The title is written into the condensation
    (canvas, see landing/heroGlass.ts); the type around the window stays crisp, like print. */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.hero{position:relative;height:calc(100vh - 54px);min-height:600px;max-height:1000px;box-sizing:border-box;display:flex;flex-direction:column;gap:clamp(14px,2.4vh,24px);padding:clamp(4px,1.4vh,16px) clamp(20px,6vw,88px) clamp(20px,4vh,40px)}
-.hero-top{display:flex;justify-content:space-between;align-items:flex-end;gap:32px}
+.hero{position:relative;height:100vh;height:100svh;min-height:620px;margin-top:-54px}
+/* The glass runs edge to edge and dissolves into the paper above and below, so the hero is the
+   page's atmosphere rather than a picture set on it. */
+.window{position:absolute;inset:0;overflow:hidden;touch-action:pan-y;cursor:crosshair;-webkit-tap-highlight-color:transparent;
+ -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 16%,#000 70%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 16%,#000 70%,transparent 100%)}
+.hero-caption{position:absolute;left:clamp(20px,6vw,88px);right:clamp(20px,6vw,88px);bottom:clamp(18px,4vh,36px);display:flex;justify-content:space-between;align-items:baseline;gap:24px;pointer-events:none}
 .hero-meta{margin:0;font:500 10.5px/1.7 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.hero-deck{margin:0;max-width:430px;font:italic 400 clamp(16px,1.35vw,19px)/1.45 var(--serif);color:#2c2b28;text-align:right}
-.window{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:clamp(18px,2.4vw,28px);background:#c9b7ae;box-shadow:0 30px 70px -40px #1d2a2a66,inset 0 0 0 1px #0000001a;touch-action:pan-y;cursor:crosshair;-webkit-tap-highlight-color:transparent}
 .hero-glass,.hero-view{position:absolute;inset:0;pointer-events:none}
-.hero-hint{position:absolute;right:calc(clamp(20px,6vw,88px) + 18px);bottom:calc(clamp(20px,4vh,40px) + 18px);margin:0;padding:6px 12px;border-radius:99px;background:#f3f2eecc;font:500 10px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:#4a4943;pointer-events:none;transition:opacity 1.2s}
+.hero-hint{margin:0;font:500 10.5px/1.7 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);transition:opacity 1.2s}
 .hero-hint.quiet{opacity:0}
 
 
@@ -34,16 +35,22 @@
 .section-head h2{margin:0;font:400 clamp(30px,3.6vw,52px)/1.05 var(--serif);letter-spacing:-.025em}
 
 /* Effects: a gallery that can keep growing, closing on an open slot for the next one. */
-.effect-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(36px,5vh,56px) clamp(18px,2.4vw,32px)}
+.effect-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(48px,7vh,72px) clamp(28px,3.4vw,48px)}
 .effect-card{display:flex;flex-direction:column;gap:10px;height:100%;text-decoration:none}
-.effect-media{position:relative;overflow:hidden;aspect-ratio:4/4.6;border-radius:999px 999px 16px 16px;background:#d9d7d0;box-shadow:inset 0 0 0 1px #0000001a;margin-bottom:8px;transition:transform .8s cubic-bezier(.2,.6,.2,1)}
-.effect-media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.85)}
-.effect-card:hover .effect-media{transform:translateY(-6px)}
+/* Mounted plates: the specimen sits in a pale paper mat with a hairline edge, like a print or a
+   pressed sample in a collection. */
+.effect-media{position:relative;overflow:hidden;aspect-ratio:4/5;margin:13px 13px 22px;border-radius:0;background:#d9d7d0;
+ box-shadow:inset 0 0 0 1px #0000001a,0 0 0 13px #f8f7f3,0 0 0 14px #1515151a,0 22px 44px -26px #2a261e59;
+ transition:transform .9s cubic-bezier(.2,.6,.2,1),box-shadow .9s}
+.effect-media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.85);transition:transform 1.6s cubic-bezier(.2,.6,.2,1)}
+.effect-card:hover .effect-media{transform:translateY(-4px);box-shadow:inset 0 0 0 1px #0000001a,0 0 0 13px #fbfaf7,0 0 0 14px #15151524,0 30px 54px -26px #2a261e66}
+.effect-card:hover .effect-media video{transform:scale(1.035)}
 .effect-meta,.effect-foot{display:flex;justify-content:space-between;gap:12px;margin:0;font:500 10.5px/1.5 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .effect-card h3{margin:0;font:400 clamp(28px,2.6vw,38px)/1 var(--serif);letter-spacing:-.02em}
 .effect-note{margin:0;font:400 15.5px/1.5 var(--serif);color:#34332f;max-width:34ch}
 .effect-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--rule)}
-.effect-yours .effect-media{display:grid;place-items:center;background:none;box-shadow:none;border:1px dashed #15151540}
+.effect-yours .effect-media{display:grid;place-items:center;background:#f8f7f3;box-shadow:0 0 0 13px #f8f7f3,0 0 0 14px #1515151a;outline:1px dashed #15151538;outline-offset:-1px}
+.effect-yours:hover .effect-media{box-shadow:0 0 0 13px #fbfaf7,0 0 0 14px #15151524}
 .effect-yours .effect-media span{font:300 56px/1 var(--serif);color:var(--muted);transition:transform .6s}
 .effect-yours:hover .effect-media span{transform:rotate(90deg)}
 .effect-yours h3{font-style:italic}
@@ -80,20 +87,12 @@
 /* Phones: a staggered two-column walk below the title, snow closing the composition. */
 @media(max-width:650px){
  .masthead-links a:not(.masthead-enter){display:none}
- .hero{height:calc(100svh - 54px);min-height:560px;padding-top:6px}
- .hero-top{flex-direction:column;align-items:flex-start;gap:10px}
- .hero-deck{text-align:left;font-size:15px}
+ .hero{min-height:560px}
+ .hero-caption{flex-direction:column;gap:2px}
  .effect-grid{grid-template-columns:1fr;gap:44px}
- .effect-media{aspect-ratio:4/4.2}
+ .effect-media{aspect-ratio:4/4.6}
 }
 @media(prefers-reduced-motion:reduce){.material{animation:none!important;transition:none!important}.elements{scroll-behavior:auto}}
-.hero-views{display:flex;gap:clamp(14px,2vw,26px);font:500 10.5px/1.7 var(--sans);letter-spacing:.16em;text-transform:uppercase}
-.hero-views button{margin:0;padding:0 0 3px;border:0;border-bottom:1px solid transparent;border-radius:0;background:none;color:var(--muted);font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;filter:none;transition:color .2s}
-.hero-views button:hover{color:var(--ink);filter:none}
-.hero-views button[aria-pressed=true]{color:var(--ink);border-bottom-color:currentColor}
-/* The visitor's own hour carries a small dot. */
-.hero-views button.now::after{content:'';display:inline-block;width:4px;height:4px;margin:0 0 2px 6px;border-radius:50%;background:currentColor;vertical-align:middle}
-@media(max-width:650px){.hero-views{gap:14px}}
 /* Specimen labels: what a material answers to, and how long it remembers. */
 .specimen{display:grid;gap:0;margin:auto 0 0;padding-top:4px;border-top:1px solid var(--rule)}
 .specimen div{display:grid;grid-template-columns:92px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule)}
@@ -107,3 +106,16 @@
 .reveal{opacity:0;transform:translateY(18px);transition:opacity .9s ease var(--delay,0s),transform 1.1s cubic-bezier(.2,.6,.2,1) var(--delay,0s)}
 .reveal.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+/* Call to action: entering the playground leads; the plugin is the second path. */
+.cta{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border:1px solid #15151538;border-radius:999px;background:#f6f5f1b8;color:var(--ink);
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font:500 11.5px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:background .25s,border-color .25s,transform .25s}
+.cta span{transition:transform .3s cubic-bezier(.2,.6,.2,1)}
+.cta:hover{background:#fff;border-color:#15151566}
+.cta:hover span{transform:translateX(4px)}
+.elements .cta-primary{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.elements .cta-primary:hover{background:#2c2b28;border-color:#2c2b28}
+.cta:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.hero-actions{position:absolute;left:clamp(20px,6vw,88px);bottom:calc(clamp(18px,4vh,36px) + 40px);display:flex;flex-wrap:wrap;gap:12px;z-index:2}
+.masthead-enter{opacity:1!important;padding:9px 15px;margin:-10px 0;border:1px solid var(--ink)!important;border-radius:999px;background:var(--ink);color:var(--paper)!important;transition:background .25s}
+.masthead-enter:hover{background:#2c2b28}
+@media(max-width:650px){.hero-actions{bottom:calc(clamp(18px,4vh,36px) + 74px);right:20px}.hero-actions .cta{flex:1;justify-content:center;padding:13px 16px}}

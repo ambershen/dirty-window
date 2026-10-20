@@ -39,6 +39,11 @@ export class HeroGlass {
   private ghosts = document.createElement('canvas')
   private gctx = this.ghosts.getContext('2d')!
   private mist = document.createElement('canvas')
+  // The hover smear: an eased brush leaves one continuous, soft trail, drawn at quarter resolution.
+  private smear = document.createElement('canvas')
+  private trail: { x: number; y: number; t: number }[] = []
+  private aim: { x: number; y: number } | null = null
+  private brush: { x: number; y: number } | null = null
   private grain: CanvasPattern | null = null
   private glass = new Path2D()
   private strokes: Stroke[] = []
@@ -68,7 +73,7 @@ export class HeroGlass {
     })
     const up = (e: PointerEvent) => { if (this.pointer?.id === e.pointerId) this.pointer = { ...this.pointer, down: false } }
     host.addEventListener('pointerup', up); host.addEventListener('pointercancel', up)
-    host.addEventListener('pointerleave', () => { this.pointer = null; this.view.lookAt?.(0, 0) })
+    host.addEventListener('pointerleave', () => { this.pointer = null; this.aim = null; this.brush = null; this.view.lookAt?.(0, 0) })
     host.addEventListener('contextmenu', e => e.preventDefault()) // a long press breathes; it does not open a menu
     this.resize(); this.cycle = performance.now() + 700
   }
@@ -95,10 +100,7 @@ export class HeroGlass {
       const g = this.gctx; g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); g.globalAlpha = .9; g.lineCap = 'round'; g.strokeStyle = '#fff'; g.lineWidth = r * 1.4
       g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(x, y); g.stroke()
       this.sweep(x, y, r + 2)
-    } else if (e.pointerType === 'mouse') {
-      this.strokes.push({ x, y, px: p.x, py: p.y, r: 30, alpha: .16, born: now, hold: 1500, fade: 9000 })
-      this.touched()
-    }
+    } else if (e.pointerType === 'mouse') { this.aim = { x, y }; this.touched() }
     p.x = x; p.y = y
     if (this.strokes.length > 2400) this.strokes.splice(0, this.strokes.length - 2400)
   }
@@ -111,8 +113,8 @@ export class HeroGlass {
     this.w = Math.max(1, box.width); this.h = Math.max(1, box.height); this.dpr = Math.min(1.5, devicePixelRatio)
     for (const c of [this.canvas, this.mask, this.title, this.scene, this.ghosts, this.mist]) { c.width = Math.round(this.w * this.dpr); c.height = Math.round(this.h * this.dpr) }
     for (const c of [this.canvas, this.scene]) { c.style.width = `${this.w}px`; c.style.height = `${this.h}px` }
-    this.veil.width = Math.ceil(this.w / VEIL); this.veil.height = Math.ceil(this.h / VEIL)
-    this.glass = new Path2D(); this.glass.roundRect(0, 0, this.w, this.h, Math.min(28, this.w * .04))
+    this.veil.width = this.smear.width = Math.ceil(this.w / VEIL); this.veil.height = this.smear.height = Math.ceil(this.h / VEIL)
+    this.glass = new Path2D(); this.glass.rect(0, 0, this.w, this.h) // edge to edge; the page fades its top and bottom
     this.view.resize(this.w, this.h, this.dpr)
     this.beads = []; this.runs = this.runs.filter(r => r.title)
     this.paintTitle(); this.paintGrain()
@@ -171,6 +173,7 @@ export class HeroGlass {
       m.beginPath(); m.moveTo(s.px, s.py); m.lineTo(s.x, s.y); m.stroke()
     }
     m.shadowBlur = 0; m.globalAlpha = 1; m.setTransform(1, 0, 0, 1, 0, 0)
+    this.drawSmear(m, now, dt)
     this.drawTitle(m, now)
     this.drawRuns(m, now, dt)
 
@@ -205,6 +208,41 @@ export class HeroGlass {
     ctx.globalAlpha = 1
   }
 
+  /**
+   * A passing hand brushes the glass. The brush eases after the pointer, so even a jumpy mouse
+   * leaves a smooth curve; the trail is stroked as continuous paths (no overlapping stamps to bead)
+   * and blurred at quarter resolution, then fades: the newest part clearest, the oldest gone.
+   */
+  private drawSmear(m: CanvasRenderingContext2D, now: number, dt: number) {
+    const HOLD = 1400, FADE = 6500, CLEAR = .34, STEPS = 24
+    if (this.aim && !this.pointer?.down) {
+      if (!this.brush) this.brush = { ...this.aim }
+      const k = 1 - Math.exp(-dt * 12)
+      this.brush.x += (this.aim.x - this.brush.x) * k; this.brush.y += (this.aim.y - this.brush.y) * k
+      const last = this.trail[this.trail.length - 1]
+      if (!last || Math.hypot(this.brush.x - last.x, this.brush.y - last.y) > 2.5) {
+        this.trail.push({ x: this.brush.x, y: this.brush.y, t: now }); this.sweep(this.brush.x, this.brush.y, 14)
+      }
+    }
+    while (this.trail.length && now - this.trail[0].t > HOLD + FADE) this.trail.shift()
+    if (!this.trail.length) return
+    const s = this.smear.getContext('2d')!
+    s.setTransform(1, 0, 0, 1, 0, 0); s.clearRect(0, 0, this.smear.width, this.smear.height)
+    s.setTransform(1 / VEIL, 0, 0, 1 / VEIL, 0, 0); s.lineCap = 'round'; s.lineJoin = 'round'; s.strokeStyle = "#fff"; s.lineWidth = 40; s.filter = "blur(3.5px)"
+    // Points of similar age share one path, so the trail fades in fine steps without seams.
+    const level = (t: number) => { const age = now - t; return Math.round(STEPS * (age < HOLD ? 1 : 1 - smooth((age - HOLD) / FADE))) }
+    let run: number[] = [], current = -1
+    const flush = () => { if (run.length >= 4 && current > 0) { s.globalAlpha = CLEAR * current / STEPS; s.beginPath(); s.moveTo(run[0], run[1]); for (let i = 2; i < run.length; i += 2) s.lineTo(run[i], run[i + 1]); s.stroke() } }
+    for (let i = 0; i < this.trail.length; i++) {
+      const p = this.trail[i], prev = this.trail[i - 1], step = level(p.t)
+      const broken = !prev || p.t - prev.t > 400 || Math.hypot(p.x - prev.x, p.y - prev.y) > 90
+      if (step !== current || broken) { flush(); run = broken ? [] : [prev.x, prev.y]; current = step }
+      run.push(p.x, p.y)
+    }
+    flush(); s.filter = 'none'; s.globalAlpha = 1
+    m.setTransform(1, 0, 0, 1, 0, 0); m.imageSmoothingQuality = 'high'; m.drawImage(this.smear, 0, 0, this.mask.width, this.mask.height)
+  }
+
   private bead(x: number, y: number, r: number, alpha: number) {
     const c = this.ctx; c.globalAlpha = alpha
     const g = c.createRadialGradient(x - r * .25, y - r * .3, 0, x, y, r * 1.1)
@@ -219,6 +257,7 @@ export class HeroGlass {
       if (this.haze.level < .02) { this.haze.x = p.x; this.haze.y = p.y; this.haze.r = 40 }
       this.haze.level = Math.min(1, this.haze.level + dt * 1.6); this.haze.r = Math.min(Math.min(this.w, this.h) * .38, this.haze.r + dt * 180)
       for (const s of this.strokes) { const reach = 1 - Math.hypot(s.x - this.haze.x, s.y - this.haze.y) / this.haze.r; if (reach > 0) s.born -= dt * 1000 * reach * (s.hold + s.fade) / 1.6 }
+      for (const p of this.trail) { const reach = 1 - Math.hypot(p.x - this.haze.x, p.y - this.haze.y) / this.haze.r; if (reach > 0) p.t -= dt * 1000 * reach * 5 }
     } else this.haze.level = Math.max(0, this.haze.level - dt * .35)
   }
 

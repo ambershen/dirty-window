@@ -23,19 +23,37 @@ const drag = async (f, ms, { hold = 0 } = {}) => {
 }
 const press = async (x, y, ms) => { await mouse('mousePressed', x, y); const start = Date.now(); for (let i = 0; Date.now() - start < ms; i++) { await mouse("mouseMoved", x + Math.sin(i) * .3, y); await wait(60) } await mouse('mouseReleased', x, y) }
 const line = (a, b, wobble = 0) => t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t + Math.sin(t * Math.PI * 2) * wobble]
+/** The outline of a jigsaw piece: knobs out on top and right, sockets in on bottom and left. */
+const puzzlePiece = (cx, cy, size) => {
+  const h = size / 2, k = size * .17, pts = []
+  const edge = (ax, ay, bx, by, nx, ny, out) => {
+    for (let i = 0; i <= 40; i++) {
+      const u = i / 40, x = ax + (bx - ax) * u, y = ay + (by - ay) * u
+      const d = Math.abs(u - .5) < .17 ? Math.sqrt(1 - ((u - .5) / .17) ** 2) * k * 1.25 * out : 0
+      pts.push([x + nx * d, y + ny * d])
+    }
+  }
+  edge(cx - h, cy - h, cx + h, cy - h, 0, -1, 1)   // top: knob out
+  edge(cx + h, cy - h, cx + h, cy + h, 1, 0, 1)    // right: knob out
+  edge(cx + h, cy + h, cx - h, cy + h, 0, 1, -1)   // bottom: socket in
+  edge(cx - h, cy + h, cx - h, cy - h, -1, 0, -1)  // left: socket in
+  return t => pts[Math.min(pts.length - 1, Math.floor(t * (pts.length - 1)))]
+}
 const demos = {
-  water: { url: '?mode=water', prep: 3000, run: async () => {
-    await drag(t => [110 + 500 * t, 330 + Math.sin(t * Math.PI * 2) * 120], 2600); await wait(500)
-    await drag(t => [620 - 470 * t, 640 + Math.sin(t * Math.PI * 1.5) * 90], 2400); await wait(2200) } },
+  // Water over a photograph: slow loops stir the surface so the image bends beneath the wakes.
+  water: { url: '?mode=water&background=pool', prep: 4000, run: async () => {
+    await drag(t => { const a = t * Math.PI * 4; return [360 + Math.cos(a) * (150 - t * 60), 470 + Math.sin(a) * (150 - t * 60)] }, 3600); await wait(400)
+    await drag(t => [90 + 540 * t, 760 - t * 120 + Math.sin(t * Math.PI * 3) * 50], 2200); await wait(2400) } },
   ice: { url: '?mode=ice', prep: 5000, run: async () => {
     await drag(line([140, 360], [580, 470], 30), 1700); await wait(300)
     await drag(line([200, 640], [470, 560]), 900, { hold: 2600 }); await wait(1600) } },
   steam: { url: '?mode=steam&effect=palm', prep: 2500, setup: async () => { await key('d'); await wait(7000) }, run: async () => {
     await drag(t => { const a = Math.PI * 2 * t; return [360 + 150 * Math.pow(Math.sin(a), 3), 470 - (120 * Math.cos(a) - 48 * Math.cos(2 * a) - 20 * Math.cos(3 * a) - 10 * Math.cos(4 * a))] }, 3200)
     await wait(1600); await key('r'); await wait(3400) } },
+  // Sand: a jigsaw piece traced with a fingertip, then a palm sweep below it.
   sand: { url: '?mode=sand', prep: 3500, run: async () => {
-    await drag(t => [100 + 520 * t, 380 + Math.sin(t * Math.PI * 3) * 70], 2800); await wait(300)
-    await key('p'); await drag(line([110, 680], [610, 640], 25), 1800); await wait(1800) } },
+    await drag(puzzlePiece(360, 400, 260), 5200); await wait(300)
+    await key('p'); await drag(line([110, 760], [610, 730], 20), 1600); await wait(1800) } },
   snow: { url: '?mode=snow', prep: 3500, setup: async () => { await js(`document.getElementById('snowfall').click()`); await wait(3000) }, run: async () => {
     await drag(t => [120 + 480 * t, 400 + Math.sin(t * Math.PI * 2) * 70], 3400); await wait(200)
     await key('p'); for (const [x, y] of [[230, 660], [480, 690]]) await press(x, y, 1500); await wait(1600) } },
