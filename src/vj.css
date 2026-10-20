@@ -1,0 +1,32 @@
+/* VJ: a full-screen deck and a quiet control panel in the site's editorial voice. */
+html,body,#app{margin:0;width:100%;height:100%;overflow:hidden;background:#0e0f11}
+.vj{position:fixed;inset:0;color:#e9e4d8;font:13px/1.5 system-ui,sans-serif}
+.vj-deck{position:absolute;inset:0;width:100%;height:100%;image-rendering:auto}
+.vj-panel{position:absolute;z-index:2;left:20px;bottom:20px;width:300px;max-height:calc(100% - 40px);overflow-y:auto;padding:18px 18px 14px;border:1px solid #ffffff1c;border-radius:16px;
+ background:#101214c7;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:opacity .4s}
+.vj-clean .vj-panel{opacity:0;pointer-events:none}
+.vj-panel h1{margin:4px 0 14px;font:400 30px/1 Georgia,serif;letter-spacing:-.02em}
+.vj-panel h1 em{color:#d9be8f}
+.vj-kicker,.vj-label,.vj-keys{margin:0;font:500 10px/1.6 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a7a196}
+.vj-label{margin:14px 0 8px;display:flex;justify-content:space-between}
+.vj-label span{color:#d9be8f}
+.vj-row{display:flex;flex-wrap:wrap;gap:6px}
+.vj-panel button,.vj-file{padding:7px 11px;border:1px solid #ffffff2a;border-radius:99px;background:#ffffff0d;color:inherit;font:500 11px system-ui,sans-serif;letter-spacing:.06em;cursor:pointer;filter:none}
+.vj-panel button:hover,.vj-file:hover{background:#ffffff1f;filter:none}
+.vj-panel button[aria-pressed=true]{background:#d9be8f;border-color:#d9be8f;color:#16130d}
+.vj-panel select{width:100%;margin-top:8px;padding:7px;border:1px solid #ffffff2a;border-radius:8px;background:#16181b;color:inherit}
+.vj-status{margin:8px 0 0;font-size:11.5px;color:#a7a196}
+.vj-tempo{display:flex;align-items:baseline;gap:8px}
+.vj-tempo b{font:400 34px/1 Georgia,serif;font-variant-numeric:tabular-nums}
+.vj-tempo small{color:#a7a196;margin-right:auto}
+.vj-beat{width:10px;height:10px;border-radius:50%;background:#d9be8f;align-self:center}
+.vj-meters{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;height:44px}
+.vj-meters i{position:relative;background:#ffffff10;border-radius:3px;overflow:hidden}
+.vj-meters span{position:absolute;inset:0;background:linear-gradient(#e9d3a8,#a98a5a);transform-origin:bottom;transform:scaleY(0)}
+.vj-hits{display:flex;gap:10px;margin-top:8px;font:500 10px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.vj-hits [data-hit]{opacity:.25}
+.vj-now{margin:8px 0 0;font:italic 13px Georgia,serif;color:#d9be8f}
+.vj-fader{display:block;margin-top:14px;font:500 10px system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a7a196}
+.vj-fader input{display:block;width:100%;margin-top:6px;accent-color:#d9be8f}
+.vj-keys{margin-top:12px;opacity:.7}
+@media(max-width:520px){.vj-panel{left:10px;right:10px;width:auto;bottom:10px}}

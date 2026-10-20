@@ -8,6 +8,12 @@ uniform sampler2D snowCrystals;
 uniform vec2 grid;
 uniform vec2 size;
 uniform float snow;
+// Light the sand can be played with (the Sand study keeps the defaults): the sun's direction, a
+// glitter on quartz grains, a moving pool of light (x, y, strength) and an overall exposure.
+uniform vec3 sunDir;
+uniform float sparkle;
+uniform vec3 spot;
+uniform float exposure;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
 float baseHeightAt(vec2 p){vec4 t=texture2D(terrain,clamp(p,vec2(0.),vec2(1.)));return (t.r+t.g/255.)*4.;}
@@ -43,7 +49,7 @@ void main(){
      baseHeightAt(p+vec2(stepUV.x,0.))-baseHeightAt(p-vec2(stepUV.x,0.)),
      baseHeightAt(p+vec2(0.,stepUV.y))-baseHeightAt(p-vec2(0.,stepUV.y)));
    vec3 duneNormal=normalize(vec3(-(broadSlope*35.+bedSlope*6.)*resolution,1.));
-   vec3 desertSun=normalize(vec3(-.45,-.75,.40));
+   vec3 desertSun=normalize(sunDir);
    float light=max(0.,dot(duneNormal,desertSun));
    // Integrate occlusion uphill so neighboring mounds shade their lower shoulders.
    float duneOcclusion=0.;
@@ -93,6 +99,9 @@ void main(){
    color-=vec3(.065,.052,.035)*darkMineral*grainBody;
    float quartz=smoothstep(.965,.995,mineral)*grainBody*light;
    color+=vec3(.10,.085,.060)*quartz;
+   // Glitter: the brightest quartz flashes, more of it the harder the music sparkles.
+   float glitterGrain=smoothstep(1.-.06*sparkle,1.,hash(grainId+7.7+floor(sparkle*9.)))*grainBody;
+   color+=vec3(1.,.93,.78)*glitterGrain*sparkle*(.35+light*.65);
    // Actual sidewall slopes produce depth; only their darkening is admitted.
    vec2 displacedSlope=vec2(dx,dy)-bedSlope;
    vec3 grooveNormal=normalize(vec3(-displacedSlope*20.,1.));
@@ -140,11 +149,16 @@ void main(){
  // Compaction stays white, with restrained cool shading rather than blue ice.
  color=mix(color,color*vec3(.975,.983,.99),material.b*snow*.45);
  color*=1.-.075*pow(length(p-.5),2.);
+ // A soft, warm pool of light drifting across the sand, and an overall exposure.
+ vec2 toSpot=(p-spot.xy)*vec2(size.x/size.y,1.);
+ color*=exposure+spot.z*exp(-dot(toSpot,toSpot)*9.)*vec3(.55,.45,.32);
  gl_FragColor=vec4(color,1.);
 }`
 
 /** Full-resolution grain is shaded separately from the coarser simulation grid. */
 export class GranularRenderer {
+  /** Light the sand can be played with; these defaults are the Sand study's fixed afternoon sun. */
+  light = { sun: [-.45, -.75, .40] as [number, number, number], sparkle: 0, spot: [.5, .5, 0] as [number, number, number], exposure: 1 }
   private gl: WebGLRenderingContext
   private program: WebGLProgram
   private texture: WebGLTexture
@@ -235,6 +249,10 @@ export class GranularRenderer {
     gl.uniform2f(gl.getUniformLocation(this.program, 'grid'), surface.width, surface.height)
     gl.uniform2f(gl.getUniformLocation(this.program, 'size'), width, height)
     gl.uniform1f(gl.getUniformLocation(this.program, 'snow'), surface.snow ? 1 : 0)
+    gl.uniform3fv(gl.getUniformLocation(this.program, 'sunDir'), this.light.sun)
+    gl.uniform1f(gl.getUniformLocation(this.program, 'sparkle'), this.light.sparkle)
+    gl.uniform3fv(gl.getUniformLocation(this.program, 'spot'), this.light.spot)
+    gl.uniform1f(gl.getUniformLocation(this.program, 'exposure'), this.light.exposure)
     gl.drawArrays(gl.TRIANGLES, 0, 6)
   }
 }

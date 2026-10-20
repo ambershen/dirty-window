@@ -6,12 +6,13 @@ async function startScene() {
   if (mode === 'ice') return await import('./ice')
   if (mode === 'sand' || mode === 'snow') return await import('./sand')
   if (mode === 'projector') return await import('./projector')
+  if (mode === 'vj') return await import('./vj')
   if (mode === 'td-controller') return await import('./td-controller')
   if (mode === 'classic') return await import('./classic')
   return await import('./midnight')
 }
 const startup = startScene().then(() => {
-  if (mode === 'home' || !mode || mode === 'projector' || mode === 'td-controller') return
+  if (mode === 'home' || !mode || mode === 'projector' || mode === 'td-controller' || mode === 'vj') return
   // The material switcher: the current study's name; it opens the five studies and the way home.
   const current = currentMaterial(mode)
   const home = document.createElement('button')
