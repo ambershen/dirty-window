@@ -11,3 +11,10 @@ Line sketches traced automatically from these images on Wikimedia Commons. The w
 - Little Dancer Aged Fourteen (Degas): File:Edgar Degas, Little Dancer Aged Fourteen, 1878-1881, NGA 110292.jpg, CC0.
 - The Discus Thrower (Myron): File:Discobolus in National Roman Museum Palazzo Massimo alle Terme.JPG, CC BY-SA 4.0, photo by Livioandronico2013.
 - The Creation of Adam (Michelangelo): File:Creation of Adam (Michelangelo) Detail.jpg, Public domain.
+- The Great Wave off Kanagawa (Hokusai): File:Tsunami by hokusai 19th century.jpg, Public domain.
+- Fine Wind, Clear Morning (Hokusai): File:Red Fuji southern wind clear morning.jpg, Public domain.
+- Dance (Matisse): File:La Danse II, par Henri Matisse.jpg, Public domain.
+- The Starry Night (van Gogh): drawn by hand from the work's motifs, after File:Van Gogh - Starry Night - Google Art Project.jpg, Public domain.
+- Praying Hands (Dürer): File:Albrecht Dürer - Praying Hands, 1508 - Google Art Project.jpg, Public domain.
+- Liberty Enlightening the World (Bartholdi): File:Statue of liberty (transparent).png, Public domain.
+- The Moai of Ahu Tongariki (the Rapa Nui): File:Standing Moai at Ahu Tongariki, Easter Island, Pacific Ocean.jpg, CC BY-SA 3.0, photo by Bjørn Christian Tørrissen.

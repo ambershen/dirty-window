@@ -5,6 +5,9 @@ export function terrainNoise(x: number, y: number): number {
   return (hash(ix, iy) * (1 - u) + hash(ix + 1, iy) * u) * (1 - v) + (hash(ix, iy + 1) * (1 - u) + hash(ix + 1, iy + 1) * u) * v
 }
 
+/** Four sample points within a cell (cells are centred on integer coordinates), for edge coverage. */
+const SAMPLES: [number, number][] = [[-.25, -.25], [.25, -.25], [-.25, .25], [.25, .25]]
+
 /** Heights are material units. Local downhill transfers conserve sand volume. */
 export class SandSurface {
   readonly levels: Float32Array
@@ -76,6 +79,50 @@ export class SandSurface {
     if (weights > 0) for (let k = 0; k < deposits.length; k++) {
       this.levels[deposits[k]] += removed * values[k] / weights
       this.disturbed[deposits[k]] = Math.min(1, this.disturbed[deposits[k]] + values[k] * .1)
+    }
+    this.resting = 4
+  }
+  /**
+   * Press a flat-bottomed mould into the sand, as a sandcastle form is pressed: each cell the shape
+   * covers sinks to `depth` below the dune (edge cells partway, for a clean edge); a little of the
+   * displaced sand rises in a thin ridge just outside, the rest is packed down. Pressing a deeper
+   * shape inside a shallower one leaves a stepped, terraced relief.
+   */
+  imprint(x0: number, y0: number, x1: number, y1: number, inside: (x: number, y: number) => boolean, depth: number, amount = .9) {
+    const m = 3, ax = Math.max(0, Math.floor(x0) - m), ay = Math.max(0, Math.floor(y0) - m), bx = Math.min(this.width - 1, Math.ceil(x1) + m), by = Math.min(this.height - 1, Math.ceil(y1) + m)
+    const w = bx - ax + 1, h = by - ay + 1
+    if (w <= 0 || h <= 0) return
+    const cover = new Float32Array(w * h)
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let c = 0
+      for (const [ox, oy] of SAMPLES) if (inside(ax + x + ox, ay + y + oy)) c++
+      cover[y * w + x] = c / SAMPLES.length
+    }
+    let removed = 0
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const c = cover[y * w + x]; if (!c) continue
+      const px = ax + x, py = ay + y, i = py * this.width + px
+      const target = this.base[i] - depth * c * (.94 + terrainNoise(px * .8, py * .8) * .12)
+      const take = Math.max(0, this.levels[i] - target) * amount
+      this.levels[i] -= take; removed += take
+      this.disturbed[i] = Math.min(1, this.disturbed[i] + c * .35)
+    }
+    // The ridge: uncovered cells within a few cells of the shape, heaviest just outside its edge.
+    const ridge: number[] = [], weights: number[] = []
+    let total = 0
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (cover[y * w + x]) continue
+      let d = Infinity
+      for (let dy = -m; dy <= m; dy++) for (let dx = -m; dx <= m; dx++) {
+        const u = x + dx, v = y + dy
+        if (u >= 0 && v >= 0 && u < w && v < h && cover[v * w + u]) d = Math.min(d, Math.hypot(dx, dy))
+      }
+      if (d > m) continue
+      const weight = Math.exp(-(((d - 1.2) / .9) ** 2)); ridge.push((ay + y) * this.width + ax + x); weights.push(weight); total += weight
+    }
+    if (total > 0) for (let k = 0; k < ridge.length; k++) {
+      this.levels[ridge[k]] += removed * .35 * weights[k] / total
+      this.disturbed[ridge[k]] = Math.min(1, this.disturbed[ridge[k]] + weights[k] * .15)
     }
     this.resting = 4
   }
