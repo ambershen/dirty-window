@@ -139,13 +139,46 @@ const MAKERS: (() => Building)[] = [
   },
 ]
 
-let last = -1
-/** A new building, never the same kind twice in a row. */
-export function nextBuilding(): Building {
-  let i = Math.floor(Math.random() * MAKERS.length)
-  if (i === last) i = (i + 1) % MAKERS.length
-  last = i
-  const b = MAKERS[i]()
+/** Winter forms, for snow. */
+const WINTER: (() => Building)[] = [
+  function igloo() {
+    const top = between(.2, .32), pieces: Piece[] = [['dome', 0, top, .8, 1, 1]], courses = int(3, 4), door = between(.2, .26)
+    // The block courses, each as wide as the dome at its height.
+    for (let i = 1; i <= courses; i++) { const y = top + i * (1 - top) / (courses + 1), half = .4 * Math.sqrt(1 - ((1 - y) / (1 - top)) ** 2); pieces.push(['rect', .4 - half + .02, y - .012, .4 + half - .02, y + .012, 3, D]) }
+    pieces.push(['dome', .56, 1 - door * 1.5, 1, 1, 2], ['arch', .7, 1 - door * 1.05, .88, 1, 3, D])
+    return { name: 'an igloo', aspect: between(1.5, 1.8), pieces }
+  },
+  function snowman() {
+    const a = between(.5, .56), b = a * between(.68, .76), c = b * between(.66, .74), w = a, pieces: Piece[] = []
+    const y2 = 1 - a * .92, y3 = y2 - b * .9, hat = Math.random() < .7
+    pieces.push(['disc', .5 - w / 2, 1 - a, .5 + w / 2, 1, 1], ['disc', .5 - b / 2, y2 - b, .5 + b / 2, y2, 2], ['disc', .5 - c / 2, y3 - c, .5 + c / 2, y3, 1])
+    if (hat) pieces.push(['rect', .5 - c * .5, y3 - c * 1.02, .5 + c * .5, y3 - c * .9, 2], ['rect', .5 - c * .32, y3 - c * 1.6, .5 + c * .32, y3 - c * 1.02, 2])
+    pieces.push(...row(2, .5 - c * .25, .5 + c * .25, c * .1, x => ['disc', x, y3 - c * .7, x + c * .1, y3 - c * .6, 3, D]), ...row(3, .5 - b * .05, .5 + b * .05, b * .1, (x, i) => ['disc', .5 - b * .05, y2 - b * (.78 - i * .25), .5 + b * .05, y2 - b * (.68 - i * .25), 3, D]))
+    return { name: 'a snowman', aspect: between(.5, .6), pieces }
+  },
+  function cabin() {
+    const trees = int(2, 4), pieces: Piece[] = [], cw = between(.36, .44), cx = between(.25, .75 - cw)
+    pieces.push(['rect', cx, .62, cx + cw, 1, 1], ['tri', cx - .05, .38, cx + cw + .05, .63, 2], ['rect', cx + cw * .7, .36, cx + cw * .82, .5, 2])
+    pieces.push(['rect', cx + cw * .4, .76, cx + cw * .6, 1, 3, D], ['rect', cx + cw * .1, .7, cx + cw * .3, .82, 3, D], ['rect', cx + cw * .7, .7, cx + cw * .9, .82, 3, D])
+    // Pines on either side, each a stack of tiers on a trunk.
+    for (let i = 0; i < trees; i++) {
+      const left = i % 2 === 0, room = left ? cx - .02 : 1 - cx - cw - .02, tw = Math.min(room, between(.16, .24)); if (tw < .08) continue
+      const x = left ? between(0, cx - .02 - tw) : between(cx + cw + .02, 1 - tw), top = between(0, .3), tiers = int(2, 3)
+      pieces.push(['rect', x + tw * .42, .88, x + tw * .58, 1, 2])
+      for (let t = 0; t < tiers; t++) { const y0 = top + t * (.88 - top) / (tiers + .4), y1 = y0 + (.88 - top) / (tiers - .3), s = .55 + .45 * (t + 1) / tiers; pieces.push(['tri', x + tw * (1 - s) / 2, y0, x + tw * (1 + s) / 2, Math.min(.9, y1), (t % 2 + 1) as Level]) }
+    }
+    return { name: 'a cabin among the pines', aspect: between(1.4, 1.9), pieces }
+  },
+]
+
+let last: (() => Building) | null = null
+/** A new building, never the same kind twice in a row; in snow, the winter forms (twice as likely) join the castle, cathedral, pagoda, domed hall and lighthouse. */
+export function nextBuilding(snow = false): Building {
+  const makers = snow ? [...WINTER, ...WINTER, ...[0, 4, 5, 6, 7].map(i => MAKERS[i])] : MAKERS
+  let i = Math.floor(Math.random() * makers.length)
+  while (makers[i] === last) i = (i + 1) % makers.length
+  last = makers[i]
+  const b = last()
   return { ...b, pieces: b.pieces.filter(p => p[3] > p[1] && p[4] > p[2]) }
 }
 

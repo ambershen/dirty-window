@@ -1,18 +1,22 @@
 import './vj.css'
 import { AudioEngine, type Source } from './vj/audioEngine'
-import { SandDeck } from './vj/sandDeck'
+import { SandDeck, type Material } from './vj/sandDeck'
 
 /**
  * Natural Effects VJ: the music plays the materials the way a hand would. Full-screen deck with a
- * small control panel: where the sound comes from, the tempo (detected, or tapped), what the
- * engine hears, and how strongly the material answers. Keys: T tap, A auto tempo, H hide, F fullscreen.
+ * small control panel: the material (sand or snow), where the sound comes from, the tempo (detected,
+ * or tapped), what the engine hears, and how strongly the material answers. Keys: M material, T tap,
+ * A auto tempo, H hide, F fullscreen. ?material=snow starts there.
  */
 document.title = 'VJ — Natural Effects'
 const app = document.getElementById('app')!
 app.innerHTML = `
 <main class="vj" id="vj">
   <aside class="vj-panel" aria-label="VJ controls">
-    <header><p class="vj-kicker">Natural Effects · VJ</p><h1>Sand, <em>played</em></h1></header>
+    <header><p class="vj-kicker">Natural Effects · VJ</p><h1><span id="vj-title">Sand</span>, <em>played</em></h1></header>
+    <section aria-label="Material">
+      <div class="vj-row"><button type="button" data-material="sand">Sand</button><button type="button" data-material="snow">Snow</button></div>
+    </section>
     <section aria-label="Sound source">
       <p class="vj-label">Listen to</p>
       <div class="vj-row">
@@ -35,12 +39,20 @@ app.innerHTML = `
       <p class="vj-now" id="vj-figure"></p>
     </section>
     <label class="vj-fader">Sensitivity <input id="vj-gain" type="range" min="0.4" max="3" step="0.05" value="1"></label>
-    <p class="vj-keys">T tap · A auto · H hide · F fullscreen</p>
+    <p class="vj-keys">M material · T tap · A auto · H hide · F fullscreen</p>
   </aside>
 </main>`
 
 const stage = document.getElementById('vj')!
-const deck = new SandDeck(stage)
+const asked = new URLSearchParams(location.search).get('material')
+const deck = new SandDeck(stage, asked === 'snow' ? 'snow' : 'sand')
+const title = document.getElementById('vj-title')!
+function material(kind: Material) {
+  deck.kind = kind; stage.dataset.material = kind; title.textContent = { sand: 'Sand', snow: 'Snow' }[kind]
+  document.querySelectorAll<HTMLElement>('[data-material]').forEach(b => { if (b !== stage) b.setAttribute('aria-pressed', String(b.dataset.material === kind)) })
+}
+material(deck.kind)
+document.querySelectorAll<HTMLButtonElement>('button[data-material]').forEach(b => b.onclick = () => material(b.dataset.material as Material))
 const engine = new AudioEngine()
 const status = document.getElementById('vj-status')!, device = document.getElementById('vj-device') as HTMLSelectElement
 const bpm = document.getElementById('vj-bpm')!, beatDot = document.getElementById('vj-beat')!, tempoMode = document.getElementById('vj-tempo-mode')!
@@ -71,7 +83,8 @@ gain.oninput = () => { engine.gain = Number(gain.value) }
 addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.repeat || (e.target as HTMLElement).closest('input,select')) return
   const key = e.key.toLowerCase()
-  if (key === 't') engine.tap()
+  if (key === 'm') material(deck.kind === 'sand' ? 'snow' : 'sand')
+  else if (key === 't') engine.tap()
   else if (key === 'a') engine.autoTempo()
   else if (key === 'h') stage.classList.toggle('vj-clean')
   else if (key === 'f') void (document.fullscreenElement ? document.exitFullscreen() : stage.requestFullscreen())

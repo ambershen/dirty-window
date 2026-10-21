@@ -30,3 +30,8 @@ html,body,#app{margin:0;width:100%;height:100%;overflow:hidden;background:#0e0f1
 .vj-fader input{display:block;width:100%;margin-top:6px;accent-color:#d9be8f}
 .vj-keys{margin-top:12px;opacity:.7}
 @media(max-width:520px){.vj-panel{left:10px;right:10px;width:auto;bottom:10px}}
+/* On snow the panel's warm accent turns cool. */
+.vj[data-material=snow] .vj-panel h1 em,.vj[data-material=snow] .vj-label span,.vj[data-material=snow] .vj-now{color:#bcd3e4}
+.vj[data-material=snow] .vj-panel button[aria-pressed=true]{background:#bcd3e4;border-color:#bcd3e4;color:#10161b}
+.vj[data-material=snow] .vj-beat{background:#bcd3e4}
+.vj[data-material=snow] .vj-meters span{background:linear-gradient(#e6f0f7,#8aa6bb)}

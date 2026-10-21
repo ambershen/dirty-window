@@ -11,6 +11,10 @@ uniform float snow;
 // Light the sand can be played with (the Sand study keeps the defaults): the sun's direction, a
 // glitter on quartz grains, a moving pool of light (x, y, strength) and an overall exposure.
 uniform vec3 sunDir;
+// The light on fine relief (furrows, prints): fixed in the studies, played on the VJ deck.
+uniform vec3 fineSun;
+// How dark (and how blue) shadows fall on snow: soft grey in the study, deep sky-blue on the VJ deck.
+uniform vec3 snowShadow;
 uniform float sparkle;
 uniform vec3 spot;
 uniform float exposure;
@@ -27,17 +31,17 @@ void main(){
  float fine=noise(pixel*.77), grain=hash(floor(pixel*1.35));
  // Keep fine grains out of the normal to avoid embossed, icy noise.
  vec3 normal=normalize(vec3(-dx*5.5,-dy*5.5,1.));
- vec3 sun=normalize(vec3(-.55,-.72,.65));
+ vec3 sun=normalize(fineSun);
  float diffuse=max(0.,dot(normal,sun));
  float horizon=0.;
  for(int i=1;i<=5;i++){
   float reach=float(i)*1.8;
-  horizon=max(horizon,(heightAt(p-vec2(.65,.76)*stepUV*reach)-z)/reach);
+  horizon=max(horizon,(heightAt(p+normalize(sun.xy)*stepUV*reach)-z)/reach);
  }
  float shade=exp(-max(0.,horizon-.015)*mix(4.,2.2,snow));
  float ambient=mix(.52+diffuse*.65,.86+diffuse*.20,snow);
  vec3 color=mix(vec3(.84,.665,.415),vec3(.985,.989,.995),snow);
- color*=ambient*mix(mix(.65,.88,snow),1.,shade);
+ color*=ambient*mix(mix(vec3(.65),snowShadow,snow),vec3(1.),shade);
  if(snow<.5){
    // Broad slopes get stronger relief without over-amplifying narrow finger grooves.
    vec2 reach=stepUV*9.;
@@ -145,20 +149,23 @@ void main(){
    float intact=1.-smoothstep(.02,.85,material.b);
    float relief=mix(.18,.65,intact);
    color=mix(color,crystals.rgb*ambient,crystals.a*relief);
+   // Glints: loose crystals catch the light, more of them the harder the music sparkles.
+   float glint=smoothstep(1.-.035*sparkle,1.,hash(floor(pixel*.8)+floor(sparkle*9.)))*intact;
+   color+=vec3(.95,.98,1.)*glint*sparkle*.55;
  }
  // Compaction stays white, with restrained cool shading rather than blue ice.
  color=mix(color,color*vec3(.975,.983,.99),material.b*snow*.45);
  color*=1.-.075*pow(length(p-.5),2.);
- // A soft, warm pool of light drifting across the sand, and an overall exposure.
+ // A soft pool of light drifting across the surface (warm on sand, cooler on snow), and an overall exposure.
  vec2 toSpot=(p-spot.xy)*vec2(size.x/size.y,1.);
- color*=exposure+spot.z*exp(-dot(toSpot,toSpot)*9.)*vec3(.55,.45,.32);
+ color*=exposure+spot.z*exp(-dot(toSpot,toSpot)*9.)*mix(vec3(.55,.45,.32),vec3(.36,.40,.46),snow);
  gl_FragColor=vec4(color,1.);
 }`
 
 /** Full-resolution grain is shaded separately from the coarser simulation grid. */
 export class GranularRenderer {
   /** Light the sand can be played with; these defaults are the Sand study's fixed afternoon sun. */
-  light = { sun: [-.45, -.75, .40] as [number, number, number], sparkle: 0, spot: [.5, .5, 0] as [number, number, number], exposure: 1 }
+  light = { sun: [-.45, -.75, .40] as [number, number, number], fine: [-.55, -.72, .65] as [number, number, number], shadow: [.88, .88, .88] as [number, number, number], sparkle: 0, spot: [.5, .5, 0] as [number, number, number], exposure: 1 }
   private gl: WebGLRenderingContext
   private program: WebGLProgram
   private texture: WebGLTexture
@@ -250,6 +257,8 @@ export class GranularRenderer {
     gl.uniform2f(gl.getUniformLocation(this.program, 'size'), width, height)
     gl.uniform1f(gl.getUniformLocation(this.program, 'snow'), surface.snow ? 1 : 0)
     gl.uniform3fv(gl.getUniformLocation(this.program, 'sunDir'), this.light.sun)
+    gl.uniform3fv(gl.getUniformLocation(this.program, 'fineSun'), this.light.fine)
+    gl.uniform3fv(gl.getUniformLocation(this.program, 'snowShadow'), this.light.shadow)
     gl.uniform1f(gl.getUniformLocation(this.program, 'sparkle'), this.light.sparkle)
     gl.uniform3fv(gl.getUniformLocation(this.program, 'spot'), this.light.spot)
     gl.uniform1f(gl.getUniformLocation(this.program, 'exposure'), this.light.exposure)

@@ -106,6 +106,7 @@ export class SandSurface {
       const take = Math.max(0, this.levels[i] - target) * amount
       this.levels[i] -= take; removed += take
       this.disturbed[i] = Math.min(1, this.disturbed[i] + c * .35)
+      if (this.snow) this.compact[i] = Math.min(1, this.compact[i] + c * .7)
     }
     // The ridge: uncovered cells within a few cells of the shape, heaviest just outside its edge.
     const ridge: number[] = [], weights: number[] = []

@@ -1,4 +1,5 @@
 import { SandSurface } from '../effects/SandSurface'
+import { SnowSurface } from '../effects/SnowSurface'
 import { GranularRenderer } from '../effects/GranularRenderer'
 import { strokesOf } from './drawings'
 import { ART_SKETCHES } from './artSketches'
@@ -12,7 +13,14 @@ import { nextBuilding, inside, type Building, type Piece } from './buildings'
  * pressing harder with the loudness. Beside it, beat by beat, sandcastle forms press a building
  * into the sand, made fresh each time (see buildings.ts), its windows and doors cut on the snares;
  * the works that fill the whole sand have none. Between works the wind rises and blows the whole
- * sand evenly smooth. A broad soft brush sweeps back over some of the work's lines each bar once it is drawn,
+ * sand evenly smooth.
+ *
+ * Snow plays the same way on the Snow study's powder, with winter buildings (igloos, snowmen, a
+ * cabin among pines) among the others; between works fresh snow settles evenly over the old work.
+ * A low winter sun circles with the phrase so every print casts a long blue shadow; hats make the
+ * crystals glint.
+ *
+ * A broad soft brush sweeps back over some of the work's lines each bar once it is drawn,
  * and over its silhouette after a drop, thickening them. A breakdown rakes quiet rings instead.
  */
 /** Each stroke of a sketch is a little off: shifted, turned and scaled, with its own tremor. */
@@ -23,6 +31,7 @@ type Sweep = { stroke: number; from: number; to: number; t: number; beats: numbe
 
 const DEPTH = { 1: .1, 2: .17, 3: .25 }
 type Build = { building: Building; x: number; y: number; w: number; h: number; main: Piece[]; details: Piece[] }
+export type Material = 'sand' | 'snow'
 
 export class SandDeck {
   private canvas = document.createElement('canvas')
@@ -46,7 +55,7 @@ export class SandDeck {
   private stone: [number, number] = [.5, .5]
   intensity = 1
 
-  constructor(private host: HTMLElement) {
+  constructor(private host: HTMLElement, private material: Material = 'sand') {
     this.canvas.className = 'vj-deck'; host.prepend(this.canvas)
     this.renderer = new GranularRenderer(this.canvas)
     new ResizeObserver(() => this.resize()).observe(host); this.resize()
@@ -59,23 +68,30 @@ export class SandDeck {
     // The same resolution choices as the Sand study.
     const dpr = Math.min(1.5, devicePixelRatio, 1800 / Math.max(this.width, this.height))
     this.canvas.width = Math.round(this.width * dpr); this.canvas.height = Math.round(this.height * dpr)
-    const scale = Math.min(1, 560 / Math.max(this.width, this.height))
-    this.surface = new SandSurface(Math.max(24, Math.round(this.width * scale)), Math.max(24, Math.round(this.height * scale)))
+    const scale = Math.min(1, 560 / Math.max(this.width, this.height)), gw = Math.max(24, Math.round(this.width * scale)), gh = Math.max(24, Math.round(this.height * scale))
+    this.surface = this.snow ? new SnowSurface(gw, gh) : new SandSurface(gw, gh)
     this.finger.down = false
     this.stillDone = false // a new surface needs the still work pressed again
   }
 
-  get mood() { return this.calm ? 'calm' : performance.now() - this.lastDrop < 5000 ? 'drop · broad brush' : this.sweeps.length ? 'drawing · broad brush' : 'drawing' }
+  private get snow() { return this.material === 'snow' }
+  get kind() { return this.material }
+  /** Change material: a fresh surface, and a new work on it. */
+  set kind(material: Material) { if (material === this.material) return; this.material = material; this.resize(); this.nextPicture() }
+
+  get mood() { return this.calm ? 'calm' : this.snow && performance.now() < this.blowUntil ? 'fresh snow' : performance.now() - this.lastDrop < 5000 ? 'drop · broad brush' : this.sweeps.length ? 'drawing · broad brush' : 'drawing' }
   get figure() {
     const p = this.picture, b = this.build
-    if (this.calm) return 'raked rings'
+    if (this.calm) return this.snow ? 'rings traced in the snow' : 'raked rings'
     return p ? `${p.name}${p.after ? `, after ${p.after}` : ''}${p.stroke >= p.strokes.length ? ' (done)' : ''}${b ? ` · ${b.building.name} rising beside it` : ''}` : ''
   }
 
   /** One touch on the sand, in screen pixels: radius, load (how hard it presses) and motion. */
   private stamp(x: number, y: number, r: number, load: number, amount: number, mx = 0, my = 0) {
     const sx = this.surface.width / this.width, sy = this.surface.height / this.height
-    this.surface.touch(x * sx, y * sy, r * sx, load, amount, mx, my)
+    // Powder gives far more under the same weight than sand, so the snow is touched lightly.
+    if (this.snow) this.surface.touch(x * sx, y * sy, r * sx * .8, load * SNOW_LOAD, amount * .8)
+    else this.surface.touch(x * sx, y * sy, r * sx, load, amount, mx, my)
   }
   /** Drag a touch from a to b, stamped closely enough to leave one continuous furrow. */
   private trace(ax: number, ay: number, bx: number, by: number, r: number, load: number, amount: number) {
@@ -102,14 +118,14 @@ export class SandDeck {
     this.picture = { name: art.name, after: art.after, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, hw, hh, strokes, hands, length: strokes.reduce((sum, s) => sum + s.length * 1.2, 0), x, y, size: fit, tilt: rand(.03), stroke: 0, at: 0 }
     this.build = full ? null : this.place(this.picture, side, wide)
     this.sweeps = []; this.boldPending = false
-    // The wind blows for four beats (within reason).
-    const now = performance.now()
-    this.finger.down = false; this.blowFrom = now; this.blowUntil = now + Math.max(1600, Math.min(3000, 4 * 60000 / this.bpm))
+    // The wind blows for four beats (within reason); fresh snow settles over a little longer.
+    const now = performance.now(), beats = this.snow ? 6 : 4
+    this.finger.down = false; this.blowFrom = now; this.blowUntil = now + Math.max(1600, Math.min(this.snow ? 4200 : 3000, beats * 60000 / this.bpm))
     this.stone = [.3 + Math.random() * .4, .35 + Math.random() * .3]
   }
   /** The next building, as large as fits in the open sand beside (or below) the work. */
   private place(p: Picture, side: number, wide: boolean): Build | null {
-    const building = nextBuilding(), a = building.aspect, W = this.width, H = this.height
+    const building = nextBuilding(this.snow), a = building.aspect, W = this.width, H = this.height
     let s: number, bx: number, by: number
     if (wide) {
       const top = p.y + p.hh + 20, bottom = H - 24
@@ -128,7 +144,7 @@ export class SandDeck {
   private press(b: Build, [shape, u0, v0, u1, v1, level]: Piece, strength: number) {
     const X0 = b.x + u0 * b.w, Y0 = b.y + v0 * b.h, X1 = b.x + u1 * b.w, Y1 = b.y + v1 * b.h, test = inside(shape, X0, Y0, X1, Y1)
     const sx = this.surface.width / this.width, sy = this.surface.height / this.height
-    this.surface.imprint(X0 * sx, Y0 * sy, X1 * sx, Y1 * sy, (x, y) => test(x / sx, y / sy), DEPTH[level] * strength)
+    this.surface.imprint(X0 * sx, Y0 * sy, X1 * sx, Y1 * sy, (x, y) => test(x / sx, y / sy), DEPTH[level] * strength * (this.snow ? SNOW_DEPTH : 1))
   }
   /**
    * A point of the picture in screen pixels, as a loose hand would place it: the stroke's own
@@ -265,13 +281,24 @@ export class SandDeck {
     L.sun = [Math.cos(azimuth) * .87, Math.sin(azimuth) * .87, height]
     L.exposure = 1 + hear.kick * .1 * this.intensity + (hear.beat ? .03 : 0)
     L.sparkle = Math.min(1, (hear.hat * .8 + hear.bands.high * .35 + hear.bands.air * .25) * this.intensity)
+    if (this.snow) {
+      // Snow is nearly white, so brightness would only clip it: the music plays its shadows instead. A low
+      // winter sun circles with the phrase and swings on each beat; bass brings it lower still, so prints
+      // and moulds cast long sky-blue shadows, deeper on the kicks. The open snow is lit as brightly as
+      // under a high sun (the exposure makes up for the low angle); the pool of light is faint and cool.
+      const low = Math.max(.22, Math.min(.5, .38 - hear.bands.bass * .14 + Math.max(0, hear.trend - 1) * .1))
+      L.fine = [Math.cos(azimuth), Math.sin(azimuth), low]
+      const flat = low / Math.hypot(1, low), deep = Math.min(1, .6 + hear.kick * .25 + hear.bands.bass * .2) * this.intensity
+      L.exposure = (.86 + .2 * .61) / (.86 + .2 * flat) * .99
+      L.shadow = [.8 - .3 * deep, .85 - .24 * deep, .93 - .12 * deep]
+    }
     const drift = beats / 16 * Math.PI, flare = now - this.lastDrop < 2500 ? (1 - (now - this.lastDrop) / 2500) * .8 : 0
-    L.spot = [.5 + Math.sin(drift) * .3, .5 + Math.sin(drift * 2) * .18, this.calm ? .08 : Math.min(1.1, (.18 + hear.bands.mid * .45) * this.intensity + flare)]
+    L.spot = [.5 + Math.sin(drift) * .3, .5 + Math.sin(drift * 2) * .18, this.calm ? .08 : Math.min(1.1, (.18 + hear.bands.mid * .45) * this.intensity + flare) * (this.snow ? .3 : 1)]
   }
 
   /** Wind smooths the sand back toward its dunes, faster in a breakdown, so marks become texture and fade. */
   private wind(dt: number) {
-    const { levels, base, disturbed } = this.surface, now = performance.now(), drawing = this.picture && this.picture.stroke < this.picture.strokes.length
+    const { levels, base, disturbed, compact } = this.surface, now = performance.now(), drawing = this.picture && this.picture.stroke < this.picture.strokes.length
     let strength = this.calm ? .3 : drawing ? .015 : .03
     if (now < this.blowUntil) {
       // Between works the wind rises and falls again; over the gust about one percent of the old work is left.
@@ -279,9 +306,10 @@ export class SandDeck {
       strength = Math.max(strength, 4.6 * Math.PI / 2 / seconds * Math.sin(Math.PI * t))
     }
     const rate = 1 - Math.exp(-dt * strength)
-    for (let i = 0; i < levels.length; i++) { levels[i] += (base[i] - levels[i]) * rate; disturbed[i] *= 1 - rate * .5 }
+    for (let i = 0; i < levels.length; i++) { levels[i] += (base[i] - levels[i]) * rate; disturbed[i] *= 1 - rate * .5; compact[i] *= 1 - rate }
   }
 }
 
+const SNOW_LOAD = .9, SNOW_DEPTH = 2.6
 const rand = (n: number) => (Math.random() * 2 - 1) * n
 const between = (a: number, b: number) => a + Math.random() * (b - a)
