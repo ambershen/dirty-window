@@ -44,6 +44,21 @@ export class SandSurface {
     this.reset()
   }
   reset() { this.levels.set(this.base); this.compact.fill(0); this.disturbed.fill(0); this.resting = 0 }
+  /**
+   * Slide the whole surface `n` cells to the left, as a scroll is unrolled: what was drawn travels
+   * with the sand, and fresh untouched ground, `ground(x, y)`, comes in on the right.
+   */
+  slide(n: number, ground: (x: number, y: number) => number) {
+    const w = this.width
+    n = Math.min(w, Math.max(0, Math.floor(n)))
+    if (!n) return
+    // One copy per field moves every row at once; the cells it wraps into each row's end are refilled.
+    for (const field of [this.levels, this.base, this.compact, this.disturbed]) field.copyWithin(0, n)
+    for (let y = 0; y < this.height; y++) for (let x = w - n; x < w; x++) {
+      const i = y * w + x, g = ground(x, y)
+      this.base[i] = this.levels[i] = g; this.compact[i] = this.disturbed[i] = 0
+    }
+  }
   touch(x: number, y: number, radius: number, load = .4, amount = .65, motionX = 0, motionY = 0) {
     const r = Math.max(1.5, radius), outer = r * 2.8
     let removed = 0, weights = 0

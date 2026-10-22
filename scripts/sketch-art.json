@@ -301,5 +301,284 @@
   "source": "File:Standing Moai at Ahu Tongariki, Easter Island, Pacific Ocean.jpg",
   "license": "CC BY-SA 3.0",
   "author": "Bjørn Christian Tørrissen"
+ },
+ {
+  "id": "sea",
+  "name": "The sea",
+  "after": "",
+  "set": "motif",
+  "story": [
+   "odyssey"
+  ],
+  "role": "scenery",
+  "hand": "sea"
+ },
+ {
+  "id": "clouds",
+  "name": "Auspicious clouds",
+  "after": "",
+  "set": "motif",
+  "story": [
+   "xiyou"
+  ],
+  "role": "sky",
+  "hand": "clouds",
+  "ground": false
+ },
+ {
+  "id": "peaks",
+  "name": "Mountains",
+  "after": "",
+  "set": "motif",
+  "story": [
+   "xiyou"
+  ],
+  "role": "scenery",
+  "hand": "peaks"
+ },
+ {
+  "id": "pine",
+  "name": "Pine",
+  "after": "",
+  "set": "motif",
+  "story": [
+   "xiyou"
+  ],
+  "role": "scenery",
+  "hand": "pine"
+ },
+ {
+  "id": "olive",
+  "name": "Olive tree",
+  "after": "",
+  "set": "motif",
+  "story": [
+   "odyssey"
+  ],
+  "role": "scenery",
+  "hand": "olive"
+ },
+ {
+  "id": "moon",
+  "name": "Crescent moon",
+  "after": "",
+  "set": "motif",
+  "story": [
+   "any"
+  ],
+  "role": "sky",
+  "hand": "moon",
+  "ground": false
+ },
+ {
+  "id": "sun",
+  "name": "Sun",
+  "after": "",
+  "set": "motif",
+  "story": [
+   "any"
+  ],
+  "role": "sky",
+  "hand": "sun",
+  "ground": false
+ },
+ {
+  "id": "polyphemus",
+  "name": "Blinding the Cyclops",
+  "after": "the Rider Painter",
+  "set": "motif",
+  "story": [
+   "odyssey"
+  ],
+  "role": "scene",
+  "crop": [
+   0.2,
+   0.2,
+   0.82,
+   0.6
+  ],
+  "sil": "dark",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Odysseus Polyphemos Cdm Paris 190.jpg",
+  "license": "Public domain",
+  "silBlur": 8
+ },
+ {
+  "id": "ship",
+  "name": "Ship",
+  "after": "Exekias",
+  "set": "motif",
+  "story": [
+   "odyssey"
+  ],
+  "role": "vehicle",
+  "crop": [
+   0.2,
+   0.36,
+   0.86,
+   0.66
+  ],
+  "sil": "dark",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Exekias Dionysos Staatliche Antikensammlungen 2044.jpg",
+  "license": "CC BY 2.5",
+  "author": "Matthias Kabel",
+  "silMix": "colorchannelmixer=rr=1:rg=0:rb=0:gr=1:gg=0:gb=0:br=1:bg=0:bb=0"
+ },
+ {
+  "id": "ram",
+  "name": "Under the ram",
+  "after": "archaic bronze, Delphi",
+  "set": "motif",
+  "story": [
+   "odyssey"
+  ],
+  "role": "creature",
+  "crop": [
+   0.15,
+   0.12,
+   0.84,
+   0.72
+  ],
+  "sil": "dark",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Odysseus under the belly of a ram, small archaic bronze, AM Delphi, 201355.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Zde",
+  "silMix": "colorchannelmixer=rr=1:rg=0:rb=0:gr=1:gg=0:gb=0:br=1:bg=0:bb=0"
+ },
+ {
+  "id": "hero",
+  "name": "Hero",
+  "after": "Exekias",
+  "set": "motif",
+  "story": [
+   "odyssey"
+  ],
+  "role": "character",
+  "crop": [
+   0.12,
+   0.09,
+   0.52,
+   0.93
+  ],
+  "sil": "dark",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Akhilleus Aias MGEt 16757.jpg",
+  "license": "Public domain"
+ },
+ {
+  "id": "athena",
+  "name": "Athena",
+  "after": "black-figure amphora",
+  "set": "motif",
+  "story": [
+   "odyssey"
+  ],
+  "role": "character",
+  "crop": [
+   0.26,
+   0.05,
+   0.77,
+   0.95
+  ],
+  "sil": "dark",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Greek - Black-figure Pseudo-Panathenaic Amphora - Walters 482107 - Detail A.jpg",
+  "license": "Public domain"
+ },
+ {
+  "id": "wukong",
+  "name": "Sun Wukong",
+  "after": "Yoshitoshi",
+  "set": "motif",
+  "story": [
+   "xiyou"
+  ],
+  "role": "character",
+  "crop": [
+   0.42,
+   0.22,
+   0.87,
+   0.9
+  ],
+  "sil": "dark",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Songokū Creating an Army from his Fur, The Monkey King Blowing Out Hairs Which Turn Into Warriors, from the series Yoshitoshi ryakuga - Vanderbilt Fine Arts Gallery - 1992.097.tif",
+  "license": "Public domain"
+ },
+ {
+  "id": "xuanzang",
+  "name": "Xuanzang",
+  "after": "Kamakura painting",
+  "set": "motif",
+  "story": [
+   "xiyou"
+  ],
+  "role": "character",
+  "crop": [
+   0.08,
+   0.17,
+   0.93,
+   0.97
+  ],
+  "sil": "light",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Xuanzang w.jpg",
+  "license": "Public domain",
+  "silBlur": 6,
+  "threshold": 70
+ },
+ {
+  "id": "dragonhorse",
+  "name": "White dragon horse",
+  "after": "the Flying Horse of Gansu",
+  "set": "motif",
+  "story": [
+   "xiyou"
+  ],
+  "role": "creature",
+  "crop": [
+   0.07,
+   0.05,
+   0.92,
+   0.8
+  ],
+  "sil": "light",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Gansu Museum 2007 257.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "G41rn8"
+ },
+ {
+  "id": "tanghorse",
+  "name": "Horse",
+  "after": "Tang sancai",
+  "set": "motif",
+  "story": [
+   "xiyou"
+  ],
+  "role": "creature",
+  "crop": [
+   0.02,
+   0.02,
+   0.99,
+   0.86
+  ],
+  "sil": "dark",
+  "budget": 2200,
+  "inner": 6,
+  "source": "File:Tang - Ferghana War Horse.JPG",
+  "license": "CC BY-SA 3.0",
+  "author": "VK Cheong",
+  "silMix": "colorchannelmixer=rr=0:rg=0:rb=1:gr=0:gg=0:gb=1:br=0:bg=0:bb=1"
  }
 ]

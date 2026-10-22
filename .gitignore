@@ -7,3 +7,6 @@ touchdesigner-mcp-td/
 touchdesigner/pond/recordings/
 __pycache__/
 *.pyc
+
+# Local secrets (e.g. ANTHROPIC_API_KEY for the drawing agent)
+.env.local

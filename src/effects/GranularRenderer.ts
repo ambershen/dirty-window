@@ -18,12 +18,16 @@ uniform vec3 snowShadow;
 uniform float sparkle;
 uniform vec3 spot;
 uniform float exposure;
+// A scroll (the VJ deck's endless sand): the visible share of the grid and its sub-cell offset, and
+// how far the grain has travelled in screen pixels. The studies leave it still.
+uniform vec2 view;
+uniform float travel;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
 float baseHeightAt(vec2 p){vec4 t=texture2D(terrain,clamp(p,vec2(0.),vec2(1.)));return (t.r+t.g/255.)*4.;}
 float heightAt(vec2 p){vec4 t=texture2D(terrain,clamp(p,vec2(0.),vec2(1.)));float bed=(t.r+t.g/255.)*4.;return snow>.5?bed:bed+(t.a-t.b)*.5;}
 void main(){
- vec2 p=vec2(uv.x,1.-uv.y), pixel=p*size, stepUV=1./grid;
+ vec2 screen=vec2(uv.x,1.-uv.y), p=vec2(screen.x*view.x+view.y,screen.y), pixel=screen*size+vec2(travel,0.), stepUV=1./grid;
  vec4 material=texture2D(terrain,p);
  float z=heightAt(p);
  float dx=heightAt(p+vec2(stepUV.x,0.))-heightAt(p-vec2(stepUV.x,0.));
@@ -103,9 +107,9 @@ void main(){
    color-=vec3(.065,.052,.035)*darkMineral*grainBody;
    float quartz=smoothstep(.965,.995,mineral)*grainBody*light;
    color+=vec3(.10,.085,.060)*quartz;
-   // Glitter: the brightest quartz flashes, more of it the harder the music sparkles.
-   float glitterGrain=smoothstep(1.-.06*sparkle,1.,hash(grainId+7.7+floor(sparkle*9.)))*grainBody;
-   color+=vec3(1.,.93,.78)*glitterGrain*sparkle*(.35+light*.65);
+   // Glitter: the brightest quartz catches the light, more of it the harder the music sparkles. The grains stay put (no reshuffling), so it shimmers rather than strobes on a projector.
+   float glitterGrain=smoothstep(1.-.06*sparkle,1.,hash(grainId+7.7))*grainBody;
+   color+=vec3(1.,.93,.78)*glitterGrain*sparkle*(.2+light*.4);
    // Actual sidewall slopes produce depth; only their darkening is admitted.
    vec2 displacedSlope=vec2(dx,dy)-bedSlope;
    vec3 grooveNormal=normalize(vec3(-displacedSlope*20.,1.));
@@ -145,19 +149,19 @@ void main(){
  color+=snow*loose*(vec3(powder*.036)-vec3(.045,.035,.023)*pores+vec3((grain-.5)*.027));
  // Stationary layered crystals belong to the surface and soften under compression.
  if(snow>.5){
-   vec4 crystals=texture2D(snowCrystals,p);
+   vec4 crystals=texture2D(snowCrystals,screen);
    float intact=1.-smoothstep(.02,.85,material.b);
    float relief=mix(.18,.65,intact);
    color=mix(color,crystals.rgb*ambient,crystals.a*relief);
    // Glints: loose crystals catch the light, more of them the harder the music sparkles.
-   float glint=smoothstep(1.-.035*sparkle,1.,hash(floor(pixel*.8)+floor(sparkle*9.)))*intact;
-   color+=vec3(.95,.98,1.)*glint*sparkle*.55;
+   float glint=smoothstep(1.-.035*sparkle,1.,hash(floor(pixel*.8)))*intact;
+   color+=vec3(.95,.98,1.)*glint*sparkle*.3;
  }
  // Compaction stays white, with restrained cool shading rather than blue ice.
  color=mix(color,color*vec3(.975,.983,.99),material.b*snow*.45);
- color*=1.-.075*pow(length(p-.5),2.);
+ color*=1.-.075*pow(length(screen-.5),2.);
  // A soft pool of light drifting across the surface (warm on sand, cooler on snow), and an overall exposure.
- vec2 toSpot=(p-spot.xy)*vec2(size.x/size.y,1.);
+ vec2 toSpot=(screen-spot.xy)*vec2(size.x/size.y,1.);
  color*=exposure+spot.z*exp(-dot(toSpot,toSpot)*9.)*mix(vec3(.55,.45,.32),vec3(.36,.40,.46),snow);
  gl_FragColor=vec4(color,1.);
 }`
@@ -166,6 +170,8 @@ void main(){
 export class GranularRenderer {
   /** Light the sand can be played with; these defaults are the Sand study's fixed afternoon sun. */
   light = { sun: [-.45, -.75, .40] as [number, number, number], fine: [-.55, -.72, .65] as [number, number, number], shadow: [.88, .88, .88] as [number, number, number], sparkle: 0, spot: [.5, .5, 0] as [number, number, number], exposure: 1 }
+  /** Scrolling, for an endless surface: the sub-cell offset (0..1) and the distance travelled in screen pixels. */
+  scroll = { cells: 0, travel: 0, on: false }
   private gl: WebGLRenderingContext
   private program: WebGLProgram
   private texture: WebGLTexture
@@ -262,6 +268,10 @@ export class GranularRenderer {
     gl.uniform1f(gl.getUniformLocation(this.program, 'sparkle'), this.light.sparkle)
     gl.uniform3fv(gl.getUniformLocation(this.program, 'spot'), this.light.spot)
     gl.uniform1f(gl.getUniformLocation(this.program, 'exposure'), this.light.exposure)
+    // While scrolling, the last column is held back so the view can slide across it smoothly.
+    const g = surface.width, s = this.scroll
+    gl.uniform2f(gl.getUniformLocation(this.program, 'view'), s.on ? (g - 1) / g : 1, s.on ? s.cells / g : 0)
+    gl.uniform1f(gl.getUniformLocation(this.program, 'travel'), s.on ? s.travel % 8192 : 0)
     gl.drawArrays(gl.TRIANGLES, 0, 6)
   }
 }

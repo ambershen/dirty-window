@@ -4,9 +4,9 @@ import { SandDeck, type Material } from './vj/sandDeck'
 
 /**
  * Natural Effects VJ: the music plays the materials the way a hand would. Full-screen deck with a
- * small control panel: the material (sand or snow), where the sound comes from, the tempo (detected,
+ * small control panel: the material (sand, snow or water), where the sound comes from, the tempo (detected,
  * or tapped), what the engine hears, and how strongly the material answers. Keys: M material, T tap,
- * A auto tempo, H hide, F fullscreen. ?material=snow starts there.
+ * A auto tempo, H hide, F fullscreen. ?material=snow or water starts there.
  */
 document.title = 'VJ — Natural Effects'
 const app = document.getElementById('app')!
@@ -15,7 +15,8 @@ app.innerHTML = `
   <aside class="vj-panel" aria-label="VJ controls">
     <header><p class="vj-kicker">Natural Effects · VJ</p><h1><span id="vj-title">Sand</span>, <em>played</em></h1></header>
     <section aria-label="Material">
-      <div class="vj-row"><button type="button" data-material="sand">Sand</button><button type="button" data-material="snow">Snow</button></div>
+      <div class="vj-row"><button type="button" data-material="sand">Sand</button><button type="button" data-material="snow">Snow</button><button type="button" data-material="water">Water</button></div>
+      <div class="vj-row" id="vj-floor" hidden><label class="vj-file"><input type="file" accept="image/*" hidden>Pool image…</label><button type="button" id="vj-floor-reset">Tiled pool</button></div>
     </section>
     <section aria-label="Sound source">
       <p class="vj-label">Listen to</p>
@@ -45,14 +46,27 @@ app.innerHTML = `
 
 const stage = document.getElementById('vj')!
 const asked = new URLSearchParams(location.search).get('material')
-const deck = new SandDeck(stage, asked === 'snow' ? 'snow' : 'sand')
+const deck = new SandDeck(stage, asked === 'snow' || asked === 'water' ? asked : 'sand')
 const title = document.getElementById('vj-title')!
+const floorRow = document.getElementById('vj-floor')!
 function material(kind: Material) {
-  deck.kind = kind; stage.dataset.material = kind; title.textContent = { sand: 'Sand', snow: 'Snow' }[kind]
+  deck.kind = kind; stage.dataset.material = kind; title.textContent = { sand: 'Sand', snow: 'Snow', water: 'Water' }[kind]
   document.querySelectorAll<HTMLElement>('[data-material]').forEach(b => { if (b !== stage) b.setAttribute('aria-pressed', String(b.dataset.material === kind)) })
+  floorRow.hidden = kind !== 'water'
 }
 material(deck.kind)
 document.querySelectorAll<HTMLButtonElement>('button[data-material]').forEach(b => b.onclick = () => material(b.dataset.material as Material))
+// Any picture can lie under the water in place of the tiled pool; it stays on this device.
+let floorUrl = ''
+function floor(image: File | null) {
+  if (floorUrl) URL.revokeObjectURL(floorUrl)
+  floorUrl = image ? URL.createObjectURL(image) : ''
+  deck.floor(floorUrl)
+  if (image && deck.kind !== 'water') material('water')
+}
+const floorInput = document.querySelector<HTMLInputElement>('#vj-floor input')!
+floorInput.onchange = () => { const f = floorInput.files?.[0]; floorInput.value = ''; if (f) floor(f) }
+document.getElementById('vj-floor-reset')!.onclick = () => floor(null)
 const engine = new AudioEngine()
 const status = document.getElementById('vj-status')!, device = document.getElementById('vj-device') as HTMLSelectElement
 const bpm = document.getElementById('vj-bpm')!, beatDot = document.getElementById('vj-beat')!, tempoMode = document.getElementById('vj-tempo-mode')!
@@ -74,7 +88,7 @@ async function listen(source: Source, options: { deviceId?: string; file?: File 
 }
 document.querySelectorAll<HTMLButtonElement>('[data-source]').forEach(b => b.onclick = () => listen(b.dataset.source as Source))
 device.onchange = () => listen('input', { deviceId: device.value })
-const file = document.querySelector<HTMLInputElement>('.vj-file input')!
+const file = document.querySelector<HTMLInputElement>('.vj-file input[accept="audio/*"]')!
 file.onchange = () => { const f = file.files?.[0]; file.value = ''; if (f) void listen('file', { file: f }) }
 document.getElementById('vj-tap')!.onclick = () => engine.tap()
 document.getElementById('vj-auto')!.onclick = () => engine.autoTempo()
@@ -83,7 +97,7 @@ gain.oninput = () => { engine.gain = Number(gain.value) }
 addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.repeat || (e.target as HTMLElement).closest('input,select')) return
   const key = e.key.toLowerCase()
-  if (key === 'm') material(deck.kind === 'sand' ? 'snow' : 'sand')
+  if (key === 'm') material(({ sand: 'snow', snow: 'water', water: 'sand' } as const)[deck.kind])
   else if (key === 't') engine.tap()
   else if (key === 'a') engine.autoTempo()
   else if (key === 'h') stage.classList.toggle('vj-clean')
@@ -91,9 +105,13 @@ addEventListener('keydown', e => {
   else return
   e.preventDefault()
 })
-// Drop a track anywhere to play it.
+// Drop a track anywhere to play it, or a picture to put it under the water.
 addEventListener('dragover', e => e.preventDefault())
-addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer?.files[0]; if (f?.type.startsWith('audio')) void listen('file', { file: f }) })
+addEventListener('drop', e => {
+  e.preventDefault(); const f = e.dataTransfer?.files[0]
+  if (f?.type.startsWith('audio')) void listen('file', { file: f })
+  else if (f?.type.startsWith('image')) floor(f)
+})
 
 let last = performance.now()
 function frame(now: number) {

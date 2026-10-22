@@ -18,3 +18,19 @@ Line sketches traced automatically from these images on Wikimedia Commons. The w
 - Praying Hands (Dürer): File:Albrecht Dürer - Praying Hands, 1508 - Google Art Project.jpg, Public domain.
 - Liberty Enlightening the World (Bartholdi): File:Statue of liberty (transparent).png, Public domain.
 - The Moai of Ahu Tongariki (the Rapa Nui): File:Standing Moai at Ahu Tongariki, Easter Island, Pacific Ocean.jpg, CC BY-SA 3.0, photo by Bjørn Christian Tørrissen.
+- The sea: drawn by hand.
+- Auspicious clouds: drawn by hand.
+- Mountains: drawn by hand.
+- Pine: drawn by hand.
+- Olive tree: drawn by hand.
+- Crescent moon: drawn by hand.
+- Sun: drawn by hand.
+- Blinding the Cyclops (the Rider Painter): File:Odysseus Polyphemos Cdm Paris 190.jpg, Public domain.
+- Ship (Exekias): File:Exekias Dionysos Staatliche Antikensammlungen 2044.jpg, CC BY 2.5, photo by Matthias Kabel.
+- Under the ram (archaic bronze, Delphi): File:Odysseus under the belly of a ram, small archaic bronze, AM Delphi, 201355.jpg, CC BY-SA 4.0, photo by Zde.
+- Hero (Exekias): File:Akhilleus Aias MGEt 16757.jpg, Public domain.
+- Athena (black-figure amphora): File:Greek - Black-figure Pseudo-Panathenaic Amphora - Walters 482107 - Detail A.jpg, Public domain.
+- Sun Wukong (Yoshitoshi): File:Songokū Creating an Army from his Fur, The Monkey King Blowing Out Hairs Which Turn Into Warriors, from the series Yoshitoshi ryakuga - Vanderbilt Fine Arts Gallery - 1992.097.tif, Public domain.
+- Xuanzang (Kamakura painting): File:Xuanzang w.jpg, Public domain.
+- White dragon horse (the Flying Horse of Gansu): File:Gansu Museum 2007 257.jpg, CC BY-SA 4.0, photo by G41rn8.
+- Horse (Tang sancai): File:Tang - Ferghana War Horse.JPG, CC BY-SA 3.0, photo by VK Cheong.
