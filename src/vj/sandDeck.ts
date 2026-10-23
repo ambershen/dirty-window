@@ -85,6 +85,8 @@ export class SandDeck {
     this.canvas.width = Math.round(this.width * dpr); this.canvas.height = Math.round(this.height * dpr)
     const scale = Math.min(1, 560 / Math.max(this.width, this.height)), gw = Math.max(24, Math.round(this.width * scale)), gh = Math.max(24, Math.round(this.height * scale))
     this.surface = this.snow ? new SnowSurface(gw, gh) : new SandSurface(gw, gh)
+    // Sand stands like a mural: what the fingertip piles up runs down the screen.
+    if (!this.snow) this.surface.gravity = GRAVITY
     // The scroll's own dunes, laid out along its length so new ground can keep arriving.
     this.pan = this.slid = 0; this.riverAt = null; Object.assign(this.renderer.scroll, { on: this.scrolling, cells: 0, travel: 0 })
     if (this.scrolling) { const s = this.surface; for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) s.base[y * gw + x] = this.ground(x, y); s.reset() }
@@ -430,6 +432,8 @@ export class SandDeck {
 }
 
 const SNOW_LOAD = .9, SNOW_DEPTH = 2.6
+/** How steeply the sand mural leans (see SandSurface.gravity). */
+const GRAVITY = .01
 /** Where the river runs on the scroll, as a share of the height. */
 const RIVER = .86
 const rand = (n: number) => (Math.random() * 2 - 1) * n

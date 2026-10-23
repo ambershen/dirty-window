@@ -16,6 +16,11 @@ export class SandSurface {
   readonly disturbed: Float32Array
   protected resting = 0
   protected pass = 0
+  /**
+   * How far the surface leans, as a mural stands on a wall (0 lies flat). Loose sand, what is piled
+   * above the dune, then settles to a gentler face below (down the screen, +y) than above.
+   */
+  gravity = 0
   constructor(readonly width: number, readonly height: number, readonly snow = false) {
     this.levels = new Float32Array(width * height)
     this.base = new Float32Array(width * height)
@@ -86,6 +91,7 @@ export class SandSurface {
           const along = ((px - x) * dirX + (py - y) * dirY) / length
           const side = motionLength > .001 ? .35 + (1 - along * along) * 1.4 + Math.max(0, along) * .45 : 1
           const downhill = Math.max(.35, Math.min(2.5, 1 + (this.base[center] - this.base[i]) * 5))
+            * (1 + this.gravity * 40 * Math.max(-1, Math.min(1, (py - y) / outer)))
           const weight = Math.exp(-Math.pow((d - 1.75) / .60, 2)) * (.8 + rough * .4) * side * downhill
           deposits.push(i); values.push(weight); weights += weight
         }
@@ -161,11 +167,24 @@ export class SandSurface {
         this.disturbed[target] = Math.min(1, this.disturbed[target] + Math.abs(amount) * 3)
       }
     }
+    // On a standing surface a pile holds a steeper face above than below: loose sand, what lies above
+    // the dune, slides down until its lower face is gentler than `slip`, then stops. A rim becomes a
+    // short apron under the line instead of running on down the screen.
+    const g = this.gravity, slip = Math.max(.002, repose - g)
+    const fall = (a: number, b: number) => {
+      const loose = this.levels[a] - this.base[a]
+      if (loose <= 0 || this.disturbed[a] < .015) return
+      const lean = loose - (this.levels[b] - this.base[b])
+      if (lean <= slip) return
+      const amount = Math.min(loose, (lean - slip) * .5) * rate * 1.6
+      this.levels[a] -= amount; this.levels[b] += amount
+      this.disturbed[b] = Math.min(1, this.disturbed[b] + amount * 6)
+    }
     const reverse = (this.pass++ % 2) !== 0
     for (let j = 0; j < this.levels.length; j++) {
       const i = reverse ? this.levels.length - j - 1 : j, x = i % this.width
       if (x + 1 < this.width) transfer(i, i + 1)
-      if (i + this.width < this.levels.length) transfer(i, i + this.width)
+      if (i + this.width < this.levels.length) { transfer(i, i + this.width); if (g > 0) fall(i, i + this.width) }
     }
   }
 }
