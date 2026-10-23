@@ -1,5 +1,6 @@
 import { ART_SKETCHES } from './vj/artSketches'
 import { MOTIFS } from './vj/motifSketches'
+import { SCROLLS, SCENE_W, SCENE_H, sceneElements } from './vj/scrolls'
 
 /**
  * A study sheet of the art sketches: each work drawing itself stroke by stroke, in ink on paper,
@@ -22,7 +23,8 @@ path{fill:none;stroke:#2a2620;stroke-width:.45;stroke-linecap:round;stroke-linej
 figcaption{display:flex;justify-content:space-between;gap:12px;margin-top:14px;font-size:20px;letter-spacing:-.01em}
 figcaption span{font:italic 13px Georgia,serif;color:#77756f}
 .sheets h2{margin:72px 0 6px;font:400 clamp(28px,3vw,42px)/1 Georgia,serif;letter-spacing:-.02em}.sheets h2 em{font-style:italic}.sheets h2+p{margin:0 0 32px;font:500 10.5px/1.6 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#77756f}
-.sand .paper{background:#e7cf9f}.sand path{stroke:#5c4226;stroke-width:.9}`
+.sand .paper{background:#e7cf9f}.sand path{stroke:#5c4226;stroke-width:.9}
+.strip{overflow-x:auto;padding-bottom:12px}.strip .paper{aspect-ratio:auto;padding:0;width:max-content}.strip svg{display:block;height:min(42vh,360px);width:auto}.strip path{stroke-width:calc(.9px / var(--s,1))}.strip text{font:italic 4px Georgia,serif;fill:#5c4226;opacity:.6}`
 document.head.append(style)
 
 const sheet = (s: { id: string; name: string; after: string; d: string }, d = s.d) => {
@@ -32,7 +34,17 @@ const sheet = (s: { id: string; name: string; after: string; d: string }, d = s.
   const paths = strokes.map(p => { const d = 6 * p.length / total; const el = `<path pathLength="1" d="${p}" style="--t:${t.toFixed(2)}s;--d:${Math.max(.12, d).toFixed(2)}s"/>`; t += d * .8; return el }).join('')
   return `<figure data-id="${s.id}"><div class="paper"><svg viewBox="0 0 100 100" aria-label="${s.name}">${paths}</svg></div><figcaption>${s.name}<span>${s.after ? `after ${s.after}` : ''}</span></figcaption></figure>`
 }
+// A composed scroll: the scenes side by side, each element drawn in the agent's stroke order.
+const strip = (scroll: typeof SCROLLS[number]) => {
+  let t = 0
+  // About three seconds a scene, shared evenly by its elements; within an element, by length of line.
+  const scenes = scroll.scenes.map((scene, i) => { const els = sceneElements(scene); return `<g transform="translate(${SCENE_W * i} 0)">${els.map(el => {
+    const strokes = el.d.split(/(?=M)/), total = strokes.reduce((n, p) => n + p.length, 0), span = 3 / els.length
+    return `<g${el.transform ? ` transform="${el.transform}"` : ''} style="--s:${el.scale.toFixed(3)}">${strokes.map(p => { const d = span * p.length / total; const path = `<path pathLength="1" d="${p}" style="--t:${t.toFixed(2)}s;--d:${Math.max(.06, d).toFixed(2)}s"/>`; t += d; return path }).join('')}</g>`
+  }).join('')}<text x="4" y="6">${i + 1} · ${scene.caption ?? scene.episode}</text></g>` }).join('')
+  return `<figure class="strip sand"><div class="paper"><svg viewBox="0 0 ${SCENE_W * scroll.scenes.length} ${SCENE_H}" aria-label="${scroll.title ?? scroll.id}">${scenes}</svg></div><figcaption>${scroll.title ?? scroll.id}<span>${scroll.scenes.length} scenes · ${scroll.scenes.map(s => s.mood).join(' → ')}</span></figcaption></figure>`
+}
 // The motifs, by storyline: what an agent composes the scroll from.
 const STORIES: [string, string][] = [['odyssey', 'The <em>Odyssey</em>'], ['xiyou', '<em>Journey</em> to the West'], ['any', 'For <em>any</em> story']]
-document.getElementById('app')!.innerHTML = `<main class="sheets"><h1>Sketches <em>for the sand</em></h1><p>Each work draws itself, stroke by stroke · click to draw again</p><div class="grid">${ART_SKETCHES.map(s => sheet(s)).join('')}</div><h2>Cut for the <em>sand</em></h2><p>One continuous silhouette, then the six strongest inner lines: what the fingertip draws</p><div class="grid sand">${ART_SKETCHES.filter(s => s.sand).map(s => sheet(s, s.sand)).join('')}</div>${STORIES.map(([story, title]) => `<h2>${title}</h2><p>Motifs for the scroll · ${MOTIFS.filter(m => m.story.includes(story)).length} pieces</p><div class="grid sand">${MOTIFS.filter(m => m.story.includes(story)).map(m => sheet(m, m.sand)).join('')}</div>`).join('')}</main>`
+document.getElementById('app')!.innerHTML = `<main class="sheets"><h1>Sketches <em>for the sand</em></h1><p>Each work draws itself, stroke by stroke · click to draw again</p>${SCROLLS.length ? `<h2>Scrolls <em>by the agent</em></h2><p>Composed scene by scene · drawn in the agent's stroke order · scroll sideways</p>${SCROLLS.map(strip).join('')}` : ''}<div class="grid" style="margin-top:40px">${ART_SKETCHES.map(s => sheet(s)).join('')}</div><h2>Cut for the <em>sand</em></h2><p>One continuous silhouette, then the six strongest inner lines: what the fingertip draws</p><div class="grid sand">${ART_SKETCHES.filter(s => s.sand).map(s => sheet(s, s.sand)).join('')}</div>${STORIES.map(([story, title]) => `<h2>${title}</h2><p>Motifs for the scroll · ${MOTIFS.filter(m => m.story.includes(story)).length} pieces</p><div class="grid sand">${MOTIFS.filter(m => m.story.includes(story)).map(m => sheet(m, m.sand)).join('')}</div>`).join('')}</main>`
 document.querySelectorAll<HTMLElement>('figure').forEach(f => f.onclick = () => { const svg = f.querySelector('svg')!; svg.replaceWith(svg.cloneNode(true)) })

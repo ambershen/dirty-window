@@ -1,0 +1,219 @@
+{
+ "id": "gaze-1",
+ "story": "gaze",
+ "title": "The Gaze · faces that look back",
+ "scenes": [
+  {
+   "episode": "pearl",
+   "mood": "busy",
+   "caption": "Vermeer, Girl with a Pearl Earring, c. 1665",
+   "glue": "gallery",
+   "ground": {
+    "d": "M0 86 L50 86.4 L100 85.7 L150 86.3 L200 86"
+   },
+   "place": [
+    {
+     "id": "pearl",
+     "x": 100,
+     "y": 80,
+     "h": 58
+    }
+   ],
+   "draw": [
+    {
+     "what": "frame",
+     "d": "M75.7 16 L124.3 16 L124.3 84 L75.7 84 L75.7 16"
+    },
+    {
+     "what": "glue:column",
+     "d": "M5.5 86.1 L5.5 17 L4 17 L4 14 L12 14 L12 17 L10.5 17 L10.5 86.1"
+    },
+    {
+     "what": "glue:column",
+     "d": "M189.5 86 L189.5 17 L188 17 L188 14 L196 14 L196 17 L194.5 17 L194.5 86"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 89 L200 89"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 96 L0 91 L5 91 L5 96 L10 96 L10 91 L15 91 L15 96 L20 96 L20 91 L25 91 L25 96 L30 96 L30 91 L35 91 L35 96 L40 96 L40 91 L45 91 L45 96 L50 96 L50 91 L55 91 L55 96 L60 96 L60 91 L65 91 L65 96 L70 96 L70 91 L75 91 L75 96 L80 96 L80 91 L85 91 L85 96 L90 96 L90 91 L95 91 L95 96 L100 96 L100 91 L105 91 L105 96 L110 96 L110 91 L115 91 L115 96 L120 96 L120 91 L125 91 L125 96 L130 96 L130 91 L135 91 L135 96 L140 96 L140 91 L145 91 L145 96 L150 96 L150 91 L155 91 L155 96 L160 96 L160 91 L165 91 L165 96 L170 96 L170 91 L175 91 L175 96 L180 96 L180 91 L185 91 L185 96 L190 96 L190 91 L195 91 L195 96 L200 96"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 98 L200 98"
+    }
+   ],
+   "strokeOrder": [
+    "ground",
+    "draw:0",
+    "place:0",
+    "draw:1",
+    "draw:2",
+    "draw:3",
+    "draw:4",
+    "draw:5"
+   ]
+  },
+  {
+   "episode": "mona",
+   "mood": "quiet",
+   "caption": "Leonardo, Mona Lisa, c. 1503",
+   "glue": "gallery",
+   "ground": {
+    "d": "M0 86 L50 86.4 L100 85.7 L150 86.3 L200 86"
+   },
+   "place": [
+    {
+     "id": "mona",
+     "x": 100,
+     "y": 80,
+     "h": 60
+    }
+   ],
+   "draw": [
+    {
+     "what": "frame",
+     "d": "M80 14 L120 14 L120 84 L80 84 L80 14"
+    },
+    {
+     "what": "glue:column",
+     "d": "M5.5 86.1 L5.5 17 L4 17 L4 14 L12 14 L12 17 L10.5 17 L10.5 86.1"
+    },
+    {
+     "what": "glue:column",
+     "d": "M189.5 86 L189.5 17 L188 17 L188 14 L196 14 L196 17 L194.5 17 L194.5 86"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 89 L200 89"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 96 L0 91 L5 91 L5 96 L10 96 L10 91 L15 91 L15 96 L20 96 L20 91 L25 91 L25 96 L30 96 L30 91 L35 91 L35 96 L40 96 L40 91 L45 91 L45 96 L50 96 L50 91 L55 91 L55 96 L60 96 L60 91 L65 91 L65 96 L70 96 L70 91 L75 91 L75 96 L80 96 L80 91 L85 91 L85 96 L90 96 L90 91 L95 91 L95 96 L100 96 L100 91 L105 91 L105 96 L110 96 L110 91 L115 91 L115 96 L120 96 L120 91 L125 91 L125 96 L130 96 L130 91 L135 91 L135 96 L140 96 L140 91 L145 91 L145 96 L150 96 L150 91 L155 91 L155 96 L160 96 L160 91 L165 91 L165 96 L170 96 L170 91 L175 91 L175 96 L180 96 L180 91 L185 91 L185 96 L190 96 L190 91 L195 91 L195 96 L200 96"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 98 L200 98"
+    }
+   ],
+   "strokeOrder": [
+    "ground",
+    "draw:0",
+    "place:0",
+    "draw:1",
+    "draw:2",
+    "draw:3",
+    "draw:4",
+    "draw:5"
+   ]
+  },
+  {
+   "episode": "jeanne",
+   "mood": "journey",
+   "caption": "Modigliani, Jeanne Hébuterne, 1919",
+   "glue": "gallery",
+   "ground": {
+    "d": "M0 86 L50 86.4 L100 85.7 L150 86.3 L200 86"
+   },
+   "place": [
+    {
+     "id": "jeanne",
+     "x": 100,
+     "y": 80,
+     "h": 56
+    }
+   ],
+   "draw": [
+    {
+     "what": "frame",
+     "d": "M72.9 18 L127.1 18 L127.1 84 L72.9 84 L72.9 18"
+    },
+    {
+     "what": "glue:column",
+     "d": "M5.5 86.1 L5.5 17 L4 17 L4 14 L12 14 L12 17 L10.5 17 L10.5 86.1"
+    },
+    {
+     "what": "glue:column",
+     "d": "M189.5 86 L189.5 17 L188 17 L188 14 L196 14 L196 17 L194.5 17 L194.5 86"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 89 L200 89"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 96 L0 91 L5 91 L5 96 L10 96 L10 91 L15 91 L15 96 L20 96 L20 91 L25 91 L25 96 L30 96 L30 91 L35 91 L35 96 L40 96 L40 91 L45 91 L45 96 L50 96 L50 91 L55 91 L55 96 L60 96 L60 91 L65 91 L65 96 L70 96 L70 91 L75 91 L75 96 L80 96 L80 91 L85 91 L85 96 L90 96 L90 91 L95 91 L95 96 L100 96 L100 91 L105 91 L105 96 L110 96 L110 91 L115 91 L115 96 L120 96 L120 91 L125 91 L125 96 L130 96 L130 91 L135 91 L135 96 L140 96 L140 91 L145 91 L145 96 L150 96 L150 91 L155 91 L155 96 L160 96 L160 91 L165 91 L165 96 L170 96 L170 91 L175 91 L175 96 L180 96 L180 91 L185 91 L185 96 L190 96 L190 91 L195 91 L195 96 L200 96"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 98 L200 98"
+    }
+   ],
+   "strokeOrder": [
+    "ground",
+    "draw:0",
+    "place:0",
+    "draw:1",
+    "draw:2",
+    "draw:3",
+    "draw:4",
+    "draw:5"
+   ]
+  },
+  {
+   "episode": "madamexsketch",
+   "mood": "climax",
+   "caption": "Sargent, Madame Gautreau, c. 1883",
+   "glue": "gallery",
+   "ground": {
+    "d": "M0 86 L50 86.4 L100 85.7 L150 86.3 L200 86"
+   },
+   "place": [
+    {
+     "id": "madamexsketch",
+     "x": 100,
+     "y": 80,
+     "h": 60
+    }
+   ],
+   "draw": [
+    {
+     "what": "frame",
+     "d": "M77.8 14 L122.2 14 L122.2 84 L77.8 84 L77.8 14"
+    },
+    {
+     "what": "glue:column",
+     "d": "M5.5 86.1 L5.5 17 L4 17 L4 14 L12 14 L12 17 L10.5 17 L10.5 86.1"
+    },
+    {
+     "what": "glue:column",
+     "d": "M189.5 86 L189.5 17 L188 17 L188 14 L196 14 L196 17 L194.5 17 L194.5 86"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 89 L200 89"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 96 L0 91 L5 91 L5 96 L10 96 L10 91 L15 91 L15 96 L20 96 L20 91 L25 91 L25 96 L30 96 L30 91 L35 91 L35 96 L40 96 L40 91 L45 91 L45 96 L50 96 L50 91 L55 91 L55 96 L60 96 L60 91 L65 91 L65 96 L70 96 L70 91 L75 91 L75 96 L80 96 L80 91 L85 91 L85 96 L90 96 L90 91 L95 91 L95 96 L100 96 L100 91 L105 91 L105 96 L110 96 L110 91 L115 91 L115 96 L120 96 L120 91 L125 91 L125 96 L130 96 L130 91 L135 91 L135 96 L140 96 L140 91 L145 91 L145 96 L150 96 L150 91 L155 91 L155 96 L160 96 L160 91 L165 91 L165 96 L170 96 L170 91 L175 91 L175 96 L180 96 L180 91 L185 91 L185 96 L190 96 L190 91 L195 91 L195 96 L200 96"
+    },
+    {
+     "what": "glue:key border",
+     "d": "M0 98 L200 98"
+    }
+   ],
+   "strokeOrder": [
+    "ground",
+    "draw:0",
+    "place:0",
+    "draw:1",
+    "draw:2",
+    "draw:3",
+    "draw:4",
+    "draw:5"
+   ]
+  }
+ ]
+}

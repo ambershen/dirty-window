@@ -1,0 +1,95 @@
+{
+ "id": "women",
+ "title": "Women",
+ "kind": "theme",
+ "ground": "land",
+ "tone": "Women as artists have shown them across two thousand years, in one gallery, from goddess to the painter's wife.",
+ "source": "The library's famous works",
+ "license": "public domain works",
+ "episodes": [
+  {
+   "id": "venus",
+   "title": "Venus de Milo, c. 100 BC",
+   "mood": "quiet",
+   "scene": "The goddess.",
+   "keyImage": "",
+   "cast": [
+    "venus"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "mona",
+   "title": "Mona Lisa, c. 1503",
+   "mood": "quiet",
+   "scene": "The merchant's wife who became the most famous face in the world.",
+   "keyImage": "",
+   "cast": [
+    "mona"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "pearl",
+   "title": "Girl with a Pearl Earring, c. 1665",
+   "mood": "journey",
+   "scene": "A girl with no name.",
+   "keyImage": "",
+   "cast": [
+    "pearl"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "odalisque",
+   "title": "Grande Odalisque, 1814",
+   "mood": "busy",
+   "scene": "Ingres stretches her spine three vertebrae too long.",
+   "keyImage": "",
+   "cast": [
+    "odalisque"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "dancer",
+   "title": "Little Dancer Aged Fourteen, 1881",
+   "mood": "journey",
+   "scene": "A real ballet student, in a real tutu, cast in bronze.",
+   "keyImage": "",
+   "cast": [
+    "dancer"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "madamexsketch",
+   "title": "Madame Gautreau, c. 1883",
+   "mood": "climax",
+   "scene": "The profile behind the scandal of Madame X.",
+   "keyImage": "",
+   "cast": [
+    "madamexsketch"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "jeanne",
+   "title": "Jeanne Hébuterne, 1919",
+   "mood": "quiet",
+   "scene": "Modigliani's companion, painted the year before both died.",
+   "keyImage": "",
+   "cast": [
+    "jeanne"
+   ],
+   "props": [],
+   "setting": []
+  }
+ ]
+}

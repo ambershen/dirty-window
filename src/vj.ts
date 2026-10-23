@@ -4,9 +4,9 @@ import { SandDeck, type Material } from './vj/sandDeck'
 
 /**
  * Natural Effects VJ: the music plays the materials the way a hand would. Full-screen deck with a
- * small control panel: the material (sand, snow or water), where the sound comes from, the tempo (detected,
+ * small control panel: the material (sand, snow, water or fog), where the sound comes from, the tempo (detected,
  * or tapped), what the engine hears, and how strongly the material answers. Keys: M material, T tap,
- * A auto tempo, H hide, F fullscreen. ?material=snow or water starts there.
+ * A auto tempo, H hide, F fullscreen. ?material=snow, water or fog starts there.
  */
 document.title = 'VJ — Natural Effects'
 const app = document.getElementById('app')!
@@ -15,8 +15,15 @@ app.innerHTML = `
   <aside class="vj-panel" aria-label="VJ controls">
     <header><p class="vj-kicker">Natural Effects · VJ</p><h1><span id="vj-title">Sand</span>, <em>played</em></h1></header>
     <section aria-label="Material">
-      <div class="vj-row"><button type="button" data-material="sand">Sand</button><button type="button" data-material="snow">Snow</button><button type="button" data-material="water">Water</button></div>
+      <div class="vj-row"><button type="button" data-material="sand">Sand</button><button type="button" data-material="snow">Snow</button><button type="button" data-material="water">Water</button><button type="button" data-material="fog">Fog</button></div>
       <div class="vj-row" id="vj-floor" hidden><label class="vj-file"><input type="file" accept="image/*" hidden>Pool image…</label><button type="button" id="vj-floor-reset">Tiled pool</button></div>
+    </section>
+    <section aria-label="Theme" id="vj-story-row">
+      <p class="vj-label">Theme</p>
+      <select id="vj-story" aria-label="Theme drawn on the sand">
+        <option value="">Random works</option><option value="all">All themes in turn</option>
+        ${SandDeck.stories.map(s => `<option value="${s.id}">${s.title}</option>`).join('')}
+      </select>
     </section>
     <section aria-label="Sound source">
       <p class="vj-label">Listen to</p>
@@ -46,14 +53,19 @@ app.innerHTML = `
 
 const stage = document.getElementById('vj')!
 const asked = new URLSearchParams(location.search).get('material')
-const deck = new SandDeck(stage, asked === 'snow' || asked === 'water' ? asked : 'sand')
+const deck = new SandDeck(stage, asked === 'snow' || asked === 'water' || asked === 'fog' ? asked : 'sand')
 const title = document.getElementById('vj-title')!
 const floorRow = document.getElementById('vj-floor')!
 function material(kind: Material) {
-  deck.kind = kind; stage.dataset.material = kind; title.textContent = { sand: 'Sand', snow: 'Snow', water: 'Water' }[kind]
+  deck.kind = kind; stage.dataset.material = kind; title.textContent = { sand: 'Sand', snow: 'Snow', water: 'Water', fog: 'Fog' }[kind]
   document.querySelectorAll<HTMLElement>('[data-material]').forEach(b => { if (b !== stage) b.setAttribute('aria-pressed', String(b.dataset.material === kind)) })
   floorRow.hidden = kind !== 'water'
+  // Themes are scrolls of scenes, so they play on the sand only.
+  storyRow.hidden = kind !== 'sand'
 }
+const storyRow = document.getElementById('vj-story-row')!, story = document.getElementById('vj-story') as HTMLSelectElement
+story.value = deck.story
+story.onchange = () => { deck.story = story.value }
 material(deck.kind)
 document.querySelectorAll<HTMLButtonElement>('button[data-material]').forEach(b => b.onclick = () => material(b.dataset.material as Material))
 // Any picture can lie under the water in place of the tiled pool; it stays on this device.
@@ -97,7 +109,7 @@ gain.oninput = () => { engine.gain = Number(gain.value) }
 addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.repeat || (e.target as HTMLElement).closest('input,select')) return
   const key = e.key.toLowerCase()
-  if (key === 'm') material(({ sand: 'snow', snow: 'water', water: 'sand' } as const)[deck.kind])
+  if (key === 'm') material(({ sand: 'snow', snow: 'water', water: 'fog', fog: 'sand' } as const)[deck.kind])
   else if (key === 't') engine.tap()
   else if (key === 'a') engine.autoTempo()
   else if (key === 'h') stage.classList.toggle('vj-clean')

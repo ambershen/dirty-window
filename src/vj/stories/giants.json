@@ -1,0 +1,71 @@
+{
+ "id": "giants",
+ "title": "Stone Giants",
+ "kind": "theme",
+ "ground": "both",
+ "tone": "Each carved figure larger than the last, from a goddess in a gallery to a colossus over the sea.",
+ "source": "The library's famous works",
+ "license": "public domain works",
+ "episodes": [
+  {
+   "id": "venus",
+   "title": "Venus de Milo, 2 m",
+   "mood": "quiet",
+   "scene": "A goddess the height of a person.",
+   "keyImage": "",
+   "cast": [
+    "venus"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "nike",
+   "title": "Winged Victory, 2.75 m",
+   "mood": "busy",
+   "scene": "Victory on a ship's prow.",
+   "keyImage": "",
+   "cast": [
+    "nike"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "moai",
+   "title": "Moai, up to 10 m",
+   "mood": "journey",
+   "scene": "Stone ancestors on an island shore.",
+   "keyImage": "",
+   "cast": [
+    "moai"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "david",
+   "title": "David, 5.17 m",
+   "mood": "journey",
+   "scene": "A giant-killer made a giant.",
+   "keyImage": "",
+   "cast": [
+    "david"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "liberty",
+   "title": "Liberty, 46 m",
+   "mood": "climax",
+   "scene": "A colossus over the harbour.",
+   "keyImage": "",
+   "cast": [
+    "liberty"
+   ],
+   "props": [],
+   "setting": []
+  }
+ ]
+}

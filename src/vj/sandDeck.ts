@@ -1,9 +1,12 @@
 import { SandSurface, terrainNoise } from '../effects/SandSurface'
 import { SnowSurface } from '../effects/SnowSurface'
+import { FogWindow } from './fogWindow'
 import { WaterPool } from './waterPool'
 import { GranularRenderer } from '../effects/GranularRenderer'
 import { strokesOf } from './drawings'
 import { ART_SKETCHES } from './artSketches'
+import { SCROLLS, sceneStrokes, type Scroll } from './scrolls'
+import type { Mood } from './storylines'
 import type { Hearing } from './audioEngine'
 import { nextBuilding, inside, type Building, type Piece } from './buildings'
 
@@ -28,18 +31,20 @@ import { nextBuilding, inside, type Building, type Piece } from './buildings'
  * A low winter sun circles with the phrase so every print casts a long blue shadow; hats make the
  * crystals glint.
  *
- * A broad soft brush sweeps back over some of the work's lines each bar once it is drawn,
+ * Fog is a fogged window at night instead (see fogWindow.ts): the finger clears the glass, so the
+ * work and its building show as the sharp city lights behind; heavy kicks send beads running down
+ * the lines, and between works the condensation forms evenly again. A broad soft brush sweeps back over some of the work's lines each bar once it is drawn,
  * and over its silhouette after a drop, thickening them. A breakdown rakes quiet rings instead.
  */
 /** Each stroke of a sketch is a little off: shifted, turned and scaled, with its own tremor. */
 type Hand = { dx: number; dy: number; turn: number; scale: number; phase: number }
-type Picture = { name: string; after?: string; cx: number; cy: number; hw: number; hh: number; strokes: [number, number][][]; hands: Hand[]; length: number; x: number; y: number; size: number; tilt: number; stroke: number; at: number }
+type Picture = { name: string; after?: string; cx: number; cy: number; hw: number; hh: number; strokes: [number, number][][]; hands: Hand[]; length: number; x: number; y: number; size: number; tilt: number; stroke: number; at: number; scene?: boolean }
 /** One pass of the broad brush along part of a stroke of the picture (indices into its points). */
 type Sweep = { stroke: number; from: number; to: number; t: number; beats: number; r: number; load: number; last: [number, number] | null }
 
 const DEPTH = { 1: .1, 2: .17, 3: .25 }
 type Build = { building: Building; x: number; y: number; w: number; h: number; main: Piece[]; details: Piece[] }
-export type Material = 'sand' | 'snow' | 'water'
+export type Material = 'sand' | 'snow' | 'fog' | 'water'
 
 export class SandDeck {
   private canvas = document.createElement('canvas')
@@ -59,7 +64,7 @@ export class SandDeck {
   private blowFrom = 0
   private blowUntil = 0
   private bpm = 120
-  private lastDrop = -Infinity; private calm = false
+  private lastDrop = -Infinity; private lastQuiet = -Infinity; private calm = false
   private stone: [number, number] = [.5, .5]
   /** The scroll: screen pixels travelled, whole cells already slid, a drop's rush, and the river's last point. */
   private pan = 0; private slid = 0; private rush = 0
@@ -68,6 +73,18 @@ export class SandDeck {
   private lit = { height: .42, exposure: 1, sparkle: 0, bass: 0, spot: 0, turn: 0 }
   intensity = 1
 
+  /**
+   * A theme to play on the sand scroll (see scrolls.ts and docs/DRAWING-AGENT.md): '' draws random
+   * works with buildings, 'all' plays every composed scroll in turn, or one scroll's id. Scenes are
+   * laid end to end, so their ground and border run on; the music picks which comes next.
+   */
+  private theme = new URLSearchParams(location.search).get('story') ?? ''
+  private scrollNow: Scroll | null = null
+  private sceneAt = -1
+  /** What the music asked for while a scene was still being drawn: taken up as soon as it is finished. */
+  private pending: Mood | 'next' | null = null
+
+  private window: FogWindow | null = null
   private pool: WaterPool | null = null
   private floorSrc = ''
   constructor(private host: HTMLElement, private material: Material = 'sand') {
@@ -90,14 +107,17 @@ export class SandDeck {
     // The scroll's own dunes, laid out along its length so new ground can keep arriving.
     this.pan = this.slid = 0; this.riverAt = null; Object.assign(this.renderer.scroll, { on: this.scrolling, cells: 0, travel: 0 })
     if (this.scrolling) { const s = this.surface; for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) s.base[y * gw + x] = this.ground(x, y); s.reset() }
+    if (this.fog && !this.window) this.window = new FogWindow(this.host)
+    this.window?.resize(this.width, this.height)
     if (this.water && !this.pool) { this.pool = new WaterPool(this.host); if (this.floorSrc) this.pool.floor(this.floorSrc) }
     this.pool?.resize(this.width, this.height)
-    this.canvas.hidden = this.water; if (this.pool) this.pool.canvas.hidden = !this.water
+    this.canvas.hidden = this.fog || this.water; if (this.window) this.window.canvas.hidden = !this.fog; if (this.pool) this.pool.canvas.hidden = !this.water
     this.finger.down = false
     this.stillDone = false // a new surface needs the still work pressed again
   }
 
   private get snow() { return this.material === 'snow' }
+  private get fog() { return this.material === 'fog' }
   private get water() { return this.material === 'water' }
   /** Sand is an endless scroll (but not when tuning a still). */
   private get scrolling() { return this.material === 'sand' && !this.still }
@@ -117,11 +137,11 @@ export class SandDeck {
   /** Change material: a fresh surface, and a new work on it. */
   set kind(material: Material) { if (material === this.material) return; this.material = material; this.resize(); this.nextPicture() }
 
-  get mood() { return this.water ? this.pool!.mood : this.calm ? 'calm' : this.snow && performance.now() < this.blowUntil ? 'fresh snow' : performance.now() - this.lastDrop < 5000 ? 'drop · broad brush' : this.sweeps.length ? 'drawing · broad brush' : 'drawing' }
+  get mood() { return this.water ? this.pool!.mood : this.calm ? 'calm' : this.snow && performance.now() < this.blowUntil ? 'fresh snow' : this.fog && performance.now() < this.blowUntil ? 'fogging over' : performance.now() - this.lastDrop < 5000 ? 'drop · broad brush' : this.sweeps.length ? 'drawing · broad brush' : 'drawing' }
   get figure() {
     if (this.water) return this.pool!.figure
     const p = this.picture, b = this.build
-    if (this.calm) return this.snow ? 'rings traced in the snow' : 'raked rings'
+    if (this.calm && !p?.scene) return this.snow ? 'rings traced in the snow' : this.fog ? 'rings traced on the glass' : 'raked rings'
     return p ? `${p.name}${p.after ? `, after ${p.after}` : ''}${p.stroke >= p.strokes.length ? ' (done)' : ''}${b ? ` · ${b.building.name} rising beside it` : ''}` : ''
   }
 
@@ -129,7 +149,8 @@ export class SandDeck {
   private stamp(x: number, y: number, r: number, load: number, amount: number, mx = 0, my = 0) {
     const sx = this.cellScale, sy = this.surface.height / this.height, gx = x * sx + this.cellShift
     // Powder gives far more under the same weight than sand, so the snow is touched lightly.
-    if (this.snow) this.surface.touch(gx, y * sy, r * sx * 1.2, load * SNOW_LOAD, amount * .8)
+    if (this.fog) this.window!.touch(x, y, r * FOG_R, load)
+    else if (this.snow) this.surface.touch(gx, y * sy, r * sx * 1.2, load * SNOW_LOAD, amount * .8)
     else this.surface.touch(gx, y * sy, r * sx, load, amount, mx, my)
   }
   /** Drag a touch from a to b, stamped closely enough to leave one continuous furrow. */
@@ -138,8 +159,49 @@ export class SandDeck {
     for (let i = 1; i <= steps; i++) { const t = i / steps; this.stamp(ax + (bx - ax) * t, ay + (by - ay) * t, r, load, amount, bx - ax, by - ay) }
   }
 
-  /** The next work, large on the sand, with the next building's place beside it. */
-  private nextPicture() {
+  /** The themes that can be played: composed scrolls, by id and title. */
+  static get stories() { return SCROLLS.map(s => ({ id: s.id, title: s.title ?? s.id })) }
+  get story() { return this.theme }
+  /** Play a theme ('' for random works, 'all' for every scroll in turn), starting from its first scene. */
+  set story(id: string) {
+    this.theme = id; this.scrollNow = null; this.sceneAt = -1
+    const p = this.picture; if (p && !p.stroke && !p.at) this.picture = null // a scene not yet begun gives way
+    this.nextPicture()
+  }
+
+  /** The next scene of the theme, laid on the scroll just after the one before; `mood` skips ahead to one that fits. */
+  private nextScene(mood?: Mood) {
+    if (!this.scrollNow) { this.scrollNow = SCROLLS.find(s => s.id === this.theme) ?? SCROLLS[Math.floor(Math.random() * SCROLLS.length)]; this.sceneAt = -1 }
+    let scroll = this.scrollNow, n = scroll.scenes.length, i = this.sceneAt + 1
+    // Never the same scene twice running: the search starts after it and stops before coming back to it.
+    if (mood) for (let k = 1; k < n; k++) { const j = (this.sceneAt + k) % n; if (scroll.scenes[j].mood === mood) { i = j; break } }
+    if (i >= n) {
+      // The end of the scroll: the next one (for 'all'), or this one again.
+      if (this.theme === 'all' || !SCROLLS.some(s => s.id === this.theme)) scroll = this.scrollNow = SCROLLS[(SCROLLS.indexOf(scroll) + 1) % SCROLLS.length]
+      i = 0
+    }
+    this.sceneAt = i
+    const scene = scroll.scenes[i], strokes = sceneStrokes(scene), W = this.width, H = this.height
+    // A scene is 200 × 100: about two thirds of the screen wide, which the sand travels in a phrase,
+    // so scene after scene meets end to end; it stands on the bottom of the sand.
+    const size = Math.min(W / 3, H * .9), hw = size, hh = size / 2
+    const p0 = this.picture, queued = p0?.scene && !p0.stroke && !p0.at
+    const x = p0?.scene ? (queued ? p0.x : p0.x + p0.hw + hw) : W - 8 - hw
+    this.picture = { name: `${scene.caption ?? scene.episode} · ${scroll.title ?? scroll.id}`, cx: 100, cy: 50, hw, hh, strokes, hands: strokes.map(() => ({ dx: rand(.25), dy: rand(.25), turn: rand(.004), scale: 1 + rand(.004), phase: Math.random() * 100 })), length: strokes.reduce((sum, s) => sum + s.length * 1.2, 0), x, y: H * .98 - hh, size, tilt: 0, stroke: 0, at: 0, scene: true }
+    this.build = null; this.sweeps = []; this.boldPending = false; this.finger.down = false
+    this.blowFrom = this.blowUntil = performance.now()
+  }
+
+  /** The next work, large on the sand, with the next building's place beside it (or the theme's next scene). */
+  private nextPicture(mood?: Mood) {
+    if (this.scrolling && this.theme && SCROLLS.length) {
+      // A scene half drawn is never abandoned: the request waits for it (a drop's climax wins over a phrase's next).
+      const p = this.picture
+      if (p?.scene && (p.stroke || p.at) && p.stroke < p.strokes.length) { if (mood || !this.pending) this.pending = mood ?? 'next'; return }
+      // A scene still coming in is already the next one; only a drop or a breakdown replaces it.
+      if (p?.scene && !p.stroke && !p.at && !mood) return
+      this.pending = null; this.nextScene(mood); return
+    }
     const index = this.order[this.drawn % this.order.length], side = this.drawn % 2 ? 1 : -1; this.drawn++
     // In sand every line is a groove with raised rims, so each work uses its cut for the sand: one
     // continuous silhouette, then a few strong inner lines (see scripts/sketch-art.mjs).
@@ -150,7 +212,8 @@ export class SandDeck {
     const hands = strokes.map(() => ({ dx: rand(.4), dy: rand(.4), turn: rand(.01), scale: 1 + rand(.008), phase: Math.random() * 100 }))
     const W = this.width, H = this.height
     // Fit the work large: tall figures by height, the wide Creation of Adam by width.
-    const full = !!art.full
+    // On the fogged window everything is drawn by hand: no building, so every work is centred and large.
+    const full = !!art.full || this.fog
     if (this.scrolling) {
       // On the scroll each work is one scene of many: it comes in on the right above the river,
       // with room after it for its building, and the scene before it still drifting on the left.
@@ -209,6 +272,8 @@ export class SandDeck {
   /** Press one piece of the building into the sand. */
   private press(b: Build, [shape, u0, v0, u1, v1, level]: Piece, strength: number) {
     const X0 = b.x + u0 * b.w, Y0 = b.y + v0 * b.h, X1 = b.x + u1 * b.w, Y1 = b.y + v1 * b.h, test = inside(shape, X0, Y0, X1, Y1)
+    // On the glass, the shallow pieces leave a film and the deep ones wipe it clean.
+    if (this.fog) { this.window!.imprint(X0, Y0, X1, Y1, test, Math.min(1, (.35 + level * .22) * strength)); return }
     const sx = this.cellScale, sy = this.surface.height / this.height, o = this.cellShift
     this.surface.imprint(X0 * sx + o, Y0 * sy, X1 * sx + o, Y1 * sy, (x, y) => test((x - o) / sx, y / sy), DEPTH[level] * strength * (this.snow ? SNOW_DEPTH : 1))
   }
@@ -251,35 +316,41 @@ export class SandDeck {
   frame(hear: Hearing, dt: number, now: number) {
     // Water holds no drawing: the music plays the pool itself (see waterPool.ts).
     if (this.water) { this.pool!.frame(hear, dt, now, this.intensity); return }
-    if (this.still) { this.drawStill(); this.surface.settle(dt); this.renderer.render(this.surface, this.width, this.height); return }
+    if (this.still) { this.drawStill(); if (this.fog) this.window!.render(hear, dt, now, 0, false); else { this.surface.settle(dt); this.renderer.render(this.surface, this.width, this.height) } return }
     const k = this.intensity, W = this.width, H = this.height, m = Math.min(W, H)
     this.bpm = hear.bpm
     // Sections: a new phrase brings a new work.
     if (hear.beat && hear.count > 0 && hear.count % 32 === 0) this.nextPicture()
     // A drop: the wind clears the sand for a new work, and once its silhouette is drawn the broad
     // brush sweeps boldly back over part of it.
-    if (hear.trend > 1.45 && hear.level > .35 && now - this.lastDrop > 8000) { this.lastDrop = now; this.rush = 7; this.nextPicture(); this.boldPending = true }
+    // A theme's scenes are chosen by the music: a drop takes the next climax, a breakdown the next quiet one.
+    if (hear.trend > 1.45 && hear.level > .35 && now - this.lastDrop > 8000) { this.lastDrop = now; this.rush = 7; this.nextPicture('climax'); this.boldPending = true }
+    const wasCalm = this.calm
     this.calm = hear.trend < .55 || (this.calm && hear.trend < .9)
+    if (this.calm && !wasCalm && this.picture?.scene && now - this.lastQuiet > 8000) { this.lastQuiet = now; this.nextPicture('quiet') }
     if (this.scrolling) this.scroll(hear, dt)
     const wanted = Math.min(1, .25 + hear.level * .45 + Math.max(0, hear.trend - 1) * .6 + (now - this.lastDrop < 6000 ? .35 : 0))
     this.looseness += (wanted - this.looseness) * (1 - Math.exp(-dt * 1.5))
     const load = (.22 + hear.level * .6 + hear.bands.bass * .3 + hear.kick * .25) * (.85 + .15 * Math.sin(now / 260)) * k
-    const p = this.picture, b = this.build, ready = now > this.blowUntil && !this.calm
+    // A theme's scene keeps being drawn through a breakdown (it is the quiet scene); otherwise a breakdown rakes rings.
+    const p = this.picture, b = this.build, scene = !!p?.scene, ready = now > this.blowUntil && (!this.calm || scene)
 
-    if (this.calm) {
+    if (this.calm && !scene) {
       // A breakdown: quiet rings raked around a stone.
       const before = this.ringS; this.ringS += dt * (hear.bpm / 120) * .1 * k
       const at = (s: number): [number, number] => { const a = s * Math.PI * 2, r = (.07 + (Math.floor(s) % 6) * .055) * m; return [W * this.stone[0] + Math.cos(a) * r, H * this.stone[1] + Math.sin(a) * r] }
       const [bx, by] = at(before), [x, y] = at(this.ringS)
       if (Math.hypot(x - bx, y - by) < m * .05 && hear.level > .03) this.trace(bx, by, x, y, 11, load * .8, .45)
       this.finger.down = false
-    } else if (p && p.stroke < p.strokes.length && hear.level > .03 && ready && (!this.scrolling || p.x + p.hw < W - 6)) {
+    } else if (p && p.stroke < p.strokes.length && hear.level > .03 && ready && (!this.scrolling || scene || p.x + p.hw < W - 6)) {
+      // A theme's scene is drawn as it comes in: the fingertip waits at the right edge for the next point to arrive.
+      const held = scene && this.point(p, p.strokes[p.stroke][Math.min(p.strokes[p.stroke].length - 1, Math.floor(p.at / 1.2) + 1)], p.stroke, p.at)[0] > W - 6
       // Drawing: the fingertip walks along the current stroke. It keeps the real tempo, surging as
       // each beat lands and easing toward the next (the pulse averages 1, so a work is finished in
       // about 70% of a phrase, a touch quicker when loud).
       const stroke = p.strokes[p.stroke], pulse = .6 + 1.2 * (1 - hear.phase) ** 2
       // On the scroll a work is drawn in half a phrase, while it is still on the right.
-      p.at += dt * p.length / (32 * 60 / hear.bpm * (this.scrolling ? .5 : .7)) * (.85 + hear.level * .3) * pulse * k
+      if (!held) p.at += dt * p.length / (32 * 60 / hear.bpm * (this.scrolling ? .5 : .7)) * (.85 + hear.level * .3) * pulse * k
       const i = Math.min(stroke.length - 1, Math.floor(p.at / 1.2)), target = this.point(p, stroke[i], p.stroke, p.at)
       // Pressure lands with the beat too; the bass widens the fingertip a little.
       const press = load * (.85 + .3 * (1 - hear.phase) ** 3)
@@ -287,6 +358,8 @@ export class SandDeck {
       this.finger = { x: target[0], y: target[1], down: true }
       // The end of a stroke: lift, and move to the next.
       if (i >= stroke.length - 1) { p.stroke++; p.at = 0; this.finger.down = false }
+      // A scene just finished: now take up what the music asked for meanwhile.
+      if (p.scene && p.stroke >= p.strokes.length && this.pending) { const want = this.pending; this.pending = null; this.nextPicture(want === 'next' ? undefined : want) }
     }
 
     // The building rises beat by beat beside the work, a piece pressed on each beat (deeper on a
@@ -313,6 +386,13 @@ export class SandDeck {
       this.sweeps = this.sweeps.filter(s => this.sweep(p, s, hear, dt, k))
     }
     this.wind(dt)
+    if (this.fog) {
+      // A heavy kick sends a bead running down from where the finger is.
+      const f = this.finger
+      if (hear.beat && hear.kick > .75 && f.down && Math.random() < .6 && this.window!.clearAt(f.x, f.y) > .4) this.window!.drip(f.x, f.y + 6)
+      this.window!.render(hear, dt, now, now - this.lastDrop < 2500 ? 1 - (now - this.lastDrop) / 2500 : 0, this.calm)
+      return
+    }
     this.surface.settle(dt)
     this.light(hear, now, dt)
     this.renderer.render(this.surface, W, H)
@@ -396,6 +476,8 @@ export class SandDeck {
     if (b) b.x -= d
     this.finger.x -= d; this.stone[0] -= d / W
     for (const sweep of this.sweeps) if (sweep.last) sweep.last[0] -= d
+    // A theme's scenes carry their own ground and border, so the river rests while they play.
+    if (p?.scene) { this.riverAt = null; return }
     // The river runs on under every scene, its bends deepening with the bass.
     this.bend += (hear.bands.bass * .045 - this.bend) * (1 - Math.exp(-dt / 2))
     const at = (this.pan + W - 6) / W, x = W - 6, y = H * (RIVER + Math.sin(at * 2.7) * .03 + Math.sin(at * 7.3 + 1.1) * this.bend)
@@ -427,6 +509,7 @@ export class SandDeck {
       strength = Math.max(strength, 4.6 * Math.PI / 2 / seconds * Math.sin(Math.PI * t))
     }
     const rate = 1 - Math.exp(-dt * strength)
+    if (this.fog) { this.window!.fog(rate); return }
     for (let i = 0; i < levels.length; i++) { levels[i] += (base[i] - levels[i]) * rate; disturbed[i] *= 1 - rate * .5; compact[i] *= 1 - rate }
   }
 }
@@ -436,5 +519,7 @@ const SNOW_LOAD = .9, SNOW_DEPTH = 2.6
 const GRAVITY = .01
 /** Where the river runs on the scroll, as a share of the height. */
 const RIVER = .86
+/** A fingertip on glass clears a wider line than it cuts in sand. */
+const FOG_R = 2.2
 const rand = (n: number) => (Math.random() * 2 - 1) * n
 const between = (a: number, b: number) => a + Math.random() * (b - a)

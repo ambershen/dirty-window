@@ -10,3 +10,5 @@ __pycache__/
 
 # Local secrets (e.g. ANTHROPIC_API_KEY for the drawing agent)
 .env.local
+.scratch/
+.claude/worktrees/

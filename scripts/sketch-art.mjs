@@ -13,8 +13,8 @@ const ARTS = JSON.parse(readFileSync(new URL('./sketch-art.json', import.meta.ur
 function pixels(art) {
   const [x0, y0, x1, y1] = art.crop ?? [0, 0, 1, 1], H = art.height ?? 320
   const filter = `crop=iw*${x1 - x0}:ih*${y1 - y0}:iw*${x0}:ih*${y0},scale=-2:${H},format=gray,gblur=sigma=${art.blur ?? 1.6},edgedetect=low=${art.low ?? .08}:high=${art.high ?? .2}`
-  const probe = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.id}.jpg`, '-vf', filter, '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 26 })
-  const size = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.id}.jpg`, '-vf', filter, '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', '-'], { maxBuffer: 1 << 26 })
+  const probe = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.src ?? art.id}.jpg`, '-vf', filter, '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 26 })
+  const size = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.src ?? art.id}.jpg`, '-vf', filter, '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', '-'], { maxBuffer: 1 << 26 })
   const w = size.readUInt32BE(16), h = size.readUInt32BE(20)
   return { w, h, edge: Uint8Array.from(probe.subarray(0, w * h), v => v > 20 ? 1 : 0) } // edge strength is grey, not white
 }
@@ -86,8 +86,8 @@ function join(list, gap) {
 function silhouette(art) {
   const [x0, y0, x1, y1] = art.crop ?? [0, 0, 1, 1], H = art.height ?? 320
   const filter = `crop=iw*${x1 - x0}:ih*${y1 - y0}:iw*${x0}:ih*${y0},scale=-2:${H},${art.silMix ? art.silMix + ',' : ''}format=gray,gblur=sigma=${art.silBlur ?? 4}`
-  const raw = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.id}.jpg`, '-vf', filter, '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 26 })
-  const png = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.id}.jpg`, '-vf', filter, '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', '-'], { maxBuffer: 1 << 26 })
+  const raw = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.src ?? art.id}.jpg`, '-vf', filter, '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 26 })
+  const png = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', `${dir}/${art.src ?? art.id}.jpg`, '-vf', filter, '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', '-'], { maxBuffer: 1 << 26 })
   const w = png.readUInt32BE(16), h = png.readUInt32BE(20), g = raw.subarray(0, w * h)
   // Otsu's threshold, unless the work names one.
   let t = art.threshold

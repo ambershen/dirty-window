@@ -1,0 +1,101 @@
+[
+ {
+  "id": "sea",
+  "depicts": "Greek wave scroll: four curling crests over two water lines",
+  "quality": 5,
+  "weight": "medium",
+  "anchor": "water"
+ },
+ {
+  "id": "olive",
+  "depicts": "Olive tree, round crown on a twisted trunk",
+  "quality": 5,
+  "weight": "medium",
+  "anchor": "ground"
+ },
+ {
+  "id": "moon",
+  "depicts": "Crescent moon",
+  "quality": 5,
+  "weight": "light",
+  "anchor": "sky"
+ },
+ {
+  "id": "sun",
+  "depicts": "Sun with eight rays",
+  "quality": 5,
+  "weight": "light",
+  "anchor": "sky"
+ },
+ {
+  "id": "ram",
+  "depicts": "Ram walking right, fleece outline, man hidden beneath",
+  "quality": 3,
+  "weight": "heavy",
+  "anchor": "ground",
+  "notes": "the man underneath does not read"
+ },
+ {
+  "id": "ship",
+  "depicts": "Greek ship with figures aboard, facing right",
+  "quality": 2,
+  "weight": "heavy",
+  "anchor": "water",
+  "notes": "tangled; drawing the ship from own strokes reads better"
+ },
+ {
+  "id": "hero",
+  "depicts": "Hero crouching, leaning on a spear (from Achilles and Ajax at the game board)",
+  "quality": 2,
+  "weight": "medium",
+  "anchor": "ground",
+  "notes": "crouched, not standing"
+ },
+ {
+  "id": "athena",
+  "depicts": "Athena, helmeted head and robe",
+  "quality": 2,
+  "weight": "medium",
+  "anchor": "ground",
+  "notes": "head is noisy"
+ },
+ {
+  "id": "polyphemus",
+  "depicts": "Blinding of the Cyclops, framed panel",
+  "quality": 2,
+  "weight": "heavy",
+  "anchor": "ground",
+  "notes": "reads as a panel, not a scene"
+ },
+ {
+  "id": "sirendive",
+  "depicts": "Siren diving head first, wings spread, from the Siren Vase",
+  "quality": 3,
+  "weight": "medium",
+  "anchor": "sky",
+  "notes": "place above a ship mast"
+ },
+ {
+  "id": "penelope",
+  "depicts": "Penelope seated on a stool at her loom, veiled, chin on hand, facing left",
+  "quality": 4,
+  "weight": "medium",
+  "anchor": "ground",
+  "notes": "seated: about 0.85 of a standing figure height"
+ },
+ {
+  "id": "herostand",
+  "depicts": "Odysseus as a traveller standing in a cloak, leaning on a staff, facing right",
+  "quality": 3,
+  "weight": "medium",
+  "anchor": "ground",
+  "notes": "head is blocky; use for any standing hero"
+ },
+ {
+  "id": "dog",
+  "depicts": "Old hound lying down, lifting its head, facing left",
+  "quality": 5,
+  "weight": "light",
+  "anchor": "ground"
+ }
+]

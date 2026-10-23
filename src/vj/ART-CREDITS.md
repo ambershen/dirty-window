@@ -34,3 +34,10 @@ Line sketches traced automatically from these images on Wikimedia Commons. The w
 - Xuanzang (Kamakura painting): File:Xuanzang w.jpg, Public domain.
 - White dragon horse (the Flying Horse of Gansu): File:Gansu Museum 2007 257.jpg, CC BY-SA 4.0, photo by G41rn8.
 - Horse (Tang sancai): File:Tang - Ferghana War Horse.JPG, CC BY-SA 3.0, photo by VK Cheong.
+- Siren diving (the Siren Painter): File:Odysseus Sirens BM E440 n2.jpg, Public domain.
+- Penelope at her loom (a red-figure vase manner): generated 2026-10-22, Generated reference (Fish Audio, gpt-image-2), traced.
+- Odysseus with his staff (a red-figure vase manner): generated 2026-10-22, Generated reference (Fish Audio, gpt-image-2), traced.
+- Argos the old dog (a red-figure vase manner): generated 2026-10-22, Generated reference (Fish Audio, gpt-image-2), traced.
+- Jeanne Hébuterne (Modigliani): File:Amedeo Modigliani, 1919, Jeanne Hébuterne, oil on canvas, 91.4 x 73 cm, Metropolitan Museum of Art.jpg, Public domain.
+- Madame Gautreau, study (John Singer Sargent): File:Madame X (Madame Pierre Gautreau) MET DT225562.jpg, CC0.
+- Grande Odalisque (Ingres): File:Jean Auguste Dominique Ingres, La Grande Odalisque, 1814.jpg, Public domain.

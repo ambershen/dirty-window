@@ -51,3 +51,29 @@ The output is a scroll of scenes, each tagged with a mood. On the deck, the musi
 ## Notes
 
 <!-- Space for further thoughts on the agent. -->
+
+### Prototype inside Claude Code (2026-10-22)
+
+The structure is being tested before any API code is written. Claude Code acts as the harness, on the subscription.
+- **Skills:** `/sand-library`, `/sand-story` and `/sand-compose` in `.claude/skills/`.
+- **Tools:** `scripts/catalog.mjs` prints the library without any path data. `scripts/render-scene.mjs` renders a scene, a scroll or individual pieces to PNG in `.scratch/` and checks the measurable rules.
+- **Stories:** `src/vj/stories/*.json`, currently the Odyssey and the Last Supper (a story behind an artwork).
+- **Scrolls:** `src/vj/scrolls/*.json`, previewed at the top of `/?mode=sketches`.
+- **Critic:** a separate subagent that sees only the PNG and the rubric.
+
+First test scroll, `odyssey-1` (4 scenes: setsail, sirens, calypso, ithaca):
+- **Seams.** The ground carried across all the seams, and the checks passed on the first draft.
+- **Sirens scene.** The critic gave it **2/5**. Its complaints were that the traced ship is a tangle, the sirens don't read, and the scale is off.
+  - One revision replaced the library ship with the agent's own strokes (hull, mast, sail, oars). The ship now reads instantly.
+  - Problems left: the bound man overlaps the sail, and the sirens are still stick-like.
+  - The critic is specific and harsh, and it gives coordinates, which is useful.
+- **Invent versus combine.** For simple geometric things (ship, walls, rocks, flames), the agent's own strokes beat the weak traces. Figures are its weak spot.
+- **The library is the bottleneck.** The figures (sirens, a standing or bound hero, Penelope, a dog) need clean pieces from `/sand-library`. The traced `hero` crouches and doesn't work for "standing under the olive tree".
+- **Library pass** (`/sand-library`: sirens, Penelope, a standing hero, a dog):
+  - **Traced from vases:** only the diving siren (Siren Vase, British Museum E440) survived, at quality 3. The perched siren and Penelope (Chiusi skyphos) merged with the rock and the loom, because they are the same orange.
+    - `sketch-art.mjs` gained `src`, so several crops can share one photo.
+    - An orange-minus-blue `silMix` isolates red-figure figures from glare.
+  - **Generated, then traced:** Fish Audio gpt-image-2 at low quality, 150 credits each, 450 in total. The reference was a "single-weight black line, profile, red-figure vase style" drawing on white, traced with `sil: dark, silBlur: 3, threshold: 200`. Penelope came out at quality 4, the dog at 5, and the standing Odysseus at 3.
+  - **Lesson:** generated line-art references trace far more cleanly than photographs of vases. Tracing photos is worth it only for famous, high-contrast works.
+- With the new pieces, the 5-scene scroll (Troy, Sirens, Calypso, Ithaca, the loom) reads as a story. The ship is drawn once from the agent's own strokes and reused, so it stays the same ship from scene to scene.
+- **Open:** whether scenes reach 4/5 after 2 revisions now that the library has clean figures; and the turn and token count per scene, to estimate cost for the later Node/API version.

@@ -1,0 +1,71 @@
+{
+ "id": "hands",
+ "title": "Hands",
+ "kind": "theme",
+ "ground": "land",
+ "tone": "Reaching: the hand as the thread from creation to a ring of dancers holding on to one another.",
+ "source": "The library's famous works",
+ "license": "public domain works",
+ "episodes": [
+  {
+   "id": "adam",
+   "title": "The Creation of Adam, c. 1512",
+   "mood": "climax",
+   "scene": "Two fingers almost touching across the sky.",
+   "keyImage": "",
+   "cast": [
+    "adam"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "hands",
+   "title": "Praying Hands, 1508",
+   "mood": "quiet",
+   "scene": "Dürer's study of two hands pressed together.",
+   "keyImage": "",
+   "cast": [
+    "hands"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "vitruvian",
+   "title": "Vitruvian Man, c. 1490",
+   "mood": "journey",
+   "scene": "Arms spread to measure the world.",
+   "keyImage": "",
+   "cast": [
+    "vitruvian"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "liberty",
+   "title": "Liberty, 1886",
+   "mood": "busy",
+   "scene": "A hand raising a torch over the harbour.",
+   "keyImage": "",
+   "cast": [
+    "liberty"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "dance",
+   "title": "Dance, 1910",
+   "mood": "climax",
+   "scene": "Hands joined in a ring.",
+   "keyImage": "",
+   "cast": [
+    "dance"
+   ],
+   "props": [],
+   "setting": []
+  }
+ ]
+}

@@ -1,0 +1,59 @@
+{
+ "id": "gaze",
+ "title": "The Gaze",
+ "kind": "theme",
+ "ground": "land",
+ "tone": "Faces in a gallery that look back at you, and finally one that turns away.",
+ "source": "The library's famous works",
+ "license": "public domain works",
+ "episodes": [
+  {
+   "id": "pearl",
+   "title": "Girl with a Pearl Earring, c. 1665",
+   "mood": "busy",
+   "scene": "She turns over her shoulder, lips parted, as if you had just spoken.",
+   "keyImage": "",
+   "cast": [
+    "pearl"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "mona",
+   "title": "Mona Lisa, c. 1503",
+   "mood": "quiet",
+   "scene": "The gaze that follows you round the room.",
+   "keyImage": "",
+   "cast": [
+    "mona"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "jeanne",
+   "title": "Jeanne Hébuterne, 1919",
+   "mood": "journey",
+   "scene": "Modigliani paints her eyes as blank almonds: a gaze you cannot meet.",
+   "keyImage": "",
+   "cast": [
+    "jeanne"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "madamexsketch",
+   "title": "Madame Gautreau, c. 1883",
+   "mood": "climax",
+   "scene": "Sargent draws her in strict profile: she will not look at you.",
+   "keyImage": "",
+   "cast": [
+    "madamexsketch"
+   ],
+   "props": [],
+   "setting": []
+  }
+ ]
+}

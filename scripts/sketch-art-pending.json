@@ -1,0 +1,265 @@
+{
+ "note": "Traced poorly from photographs (2026-10-22). Convert each source to clean line art first (image edit: \"single-weight black outlines on white, exact composition\"), then trace. Sources are in scripts/art-sources/.",
+ "entries": [
+  {
+   "id": "durer",
+   "name": "Self-Portrait at Twenty-Eight",
+   "after": "Albrecht Dürer",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Albrecht Dürer - 1500 self-portrait (High resolution and detail).jpg",
+   "license": "Public domain",
+   "crop": [
+    0.05,
+    0.06,
+    0.95,
+    0.98
+   ],
+   "sil": "light"
+  },
+  {
+   "id": "olympia",
+   "name": "Olympia",
+   "after": "Manet",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Edouard Manet - Olympia - Google Art Project 3.jpg",
+   "license": "Public domain",
+   "crop": [
+    0,
+    0.12,
+    1,
+    0.96
+   ],
+   "sil": "light",
+   "inner": 8
+  },
+  {
+   "id": "rembrandt",
+   "name": "Self-Portrait with Two Circles",
+   "after": "Rembrandt",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Rembrandt Self-portrait (Kenwood).jpg",
+   "license": "Public domain",
+   "crop": [
+    0.12,
+    0.04,
+    0.88,
+    0.9
+   ],
+   "sil": "light"
+  },
+  {
+   "id": "madamex",
+   "name": "Madame X",
+   "after": "John Singer Sargent",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Madame X (Madame Pierre Gautreau), John Singer Sargent, 1884 (unfree frame crop).jpg",
+   "license": "Public domain",
+   "crop": [
+    0.08,
+    0.03,
+    0.92,
+    0.97
+   ],
+   "sil": "dark"
+  },
+  {
+   "id": "degasstar",
+   "name": "The Star",
+   "after": "Degas",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Edgar Degas - Ballet (L'Étoile).jpg",
+   "license": "Public domain",
+   "crop": [
+    0.3,
+    0.22,
+    0.8,
+    0.95
+   ],
+   "sil": "light"
+  },
+  {
+   "id": "matissehat",
+   "name": "Woman with a Hat",
+   "after": "Matisse",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Matisse-Woman-with-a-Hat.jpg",
+   "license": "Public domain",
+   "crop": [
+    0.08,
+    0.04,
+    0.92,
+    0.96
+   ],
+   "sil": "none",
+   "inner": 16
+  },
+  {
+   "id": "botticelli",
+   "name": "The Birth of Venus",
+   "after": "Botticelli",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:La nascita di Venere (Botticelli).jpg",
+   "license": "Public domain",
+   "crop": [
+    0.36,
+    0.03,
+    0.66,
+    0.97
+   ],
+   "sil": "light"
+  },
+  {
+   "id": "klimtkiss",
+   "name": "The Kiss",
+   "after": "Klimt",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:The Kiss - Gustav Klimt - Google Cultural Institute.jpg",
+   "license": "Public domain",
+   "crop": [
+    0.22,
+    0,
+    0.85,
+    0.92
+   ],
+   "sil": "none",
+   "inner": 14
+  },
+  {
+   "id": "rodinkiss",
+   "name": "The Kiss",
+   "after": "Rodin",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Rodin Kiss 1.jpg",
+   "license": "CC BY-SA 4.0",
+   "crop": [
+    0.12,
+    0.05,
+    0.8,
+    0.8
+   ],
+   "sil": "light",
+   "author": "Caeciliusinhorto"
+  },
+  {
+   "id": "hayez",
+   "name": "The Kiss",
+   "after": "Hayez",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Hayez, Il bacio (1859).png",
+   "license": "Public domain",
+   "crop": [
+    0.18,
+    0.05,
+    0.78,
+    0.97
+   ],
+   "sil": "dark"
+  },
+  {
+   "id": "canova",
+   "name": "Psyche Revived by Cupid's Kiss",
+   "after": "Canova",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Psyché ranimée par le baiser de l'Amour, Louvre.jpg",
+   "license": "CC0",
+   "crop": [
+    0.05,
+    0.03,
+    0.72,
+    0.85
+   ],
+   "sil": "light"
+  },
+  {
+   "id": "lagoulue",
+   "name": "Moulin Rouge: La Goulue",
+   "after": "Toulouse-Lautrec",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Moulin Rouge- La Goulue MET DT11780.jpg",
+   "license": "CC0",
+   "crop": [
+    0.28,
+    0.25,
+    0.78,
+    0.95
+   ],
+   "sil": "none",
+   "inner": 14
+  },
+  {
+   "id": "mucha",
+   "name": "Job",
+   "after": "Alphonse Mucha",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Mucha-job.jpg",
+   "license": "Public domain",
+   "crop": [
+    0.05,
+    0.12,
+    0.95,
+    0.97
+   ],
+   "sil": "none",
+   "inner": 16
+  },
+  {
+   "id": "lautrecbed",
+   "name": "In Bed: The Kiss",
+   "after": "Toulouse-Lautrec",
+   "low": 0.05,
+   "high": 0.14,
+   "blur": 2.4,
+   "budget": 2400,
+   "source": "File:Toulouse-Lautrec - Au lit Le baiser, lot-5946122.jpg",
+   "license": "Public domain",
+   "crop": [
+    0,
+    0,
+    1,
+    1
+   ],
+   "sil": "none",
+   "inner": 14,
+   "full": true
+  }
+ ]
+}

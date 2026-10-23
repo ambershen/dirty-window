@@ -1,0 +1,95 @@
+{
+ "id": "body",
+ "title": "The Body",
+ "kind": "theme",
+ "ground": "land",
+ "tone": "A walk through a sculpture gallery that turns into a dance: each work on a low plinth, one figure scale, the floor line continuous; by the end the plinths are gone and the figures move.",
+ "source": "The library's famous works (src/vj/artSketches.ts)",
+ "license": "public domain works",
+ "episodes": [
+  {
+   "id": "discobolus",
+   "title": "The Discus Thrower, c. 460 BC",
+   "mood": "busy",
+   "scene": "Myron catches the body at the instant before the throw.",
+   "keyImage": "The thrower coiled on a plinth.",
+   "cast": [
+    "discobolus"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "nike",
+   "title": "Winged Victory, c. 190 BC",
+   "mood": "climax",
+   "scene": "Victory lands on a ship's prow, wind in her dress.",
+   "keyImage": "Nike striding forward, wings back.",
+   "cast": [
+    "nike"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "venus",
+   "title": "Venus de Milo, c. 100 BC",
+   "mood": "quiet",
+   "scene": "Stillness: the body at rest, arms lost.",
+   "keyImage": "Venus standing on a plinth.",
+   "cast": [
+    "venus"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "vitruvian",
+   "title": "Vitruvian Man, c. 1490",
+   "mood": "quiet",
+   "scene": "Leonardo measures the body against the circle and the square.",
+   "keyImage": "The man with arms spread.",
+   "cast": [
+    "vitruvian"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "david",
+   "title": "David, 1504",
+   "mood": "journey",
+   "scene": "Michelangelo's David waits before the fight.",
+   "keyImage": "David standing, weight on one leg.",
+   "cast": [
+    "david"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "dancer",
+   "title": "Little Dancer Aged Fourteen, 1881",
+   "mood": "journey",
+   "scene": "Degas brings a real girl from the ballet into sculpture.",
+   "keyImage": "The dancer in fourth position.",
+   "cast": [
+    "dancer"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "dance",
+   "title": "Dance, 1910",
+   "mood": "climax",
+   "scene": "Matisse's ring of dancers on a hill: the body freed.",
+   "keyImage": "Five figures in a ring.",
+   "cast": [
+    "dance"
+   ],
+   "props": [],
+   "setting": []
+  }
+ ]
+}

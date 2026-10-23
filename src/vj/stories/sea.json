@@ -1,0 +1,71 @@
+{
+ "id": "sea",
+ "title": "The Sea",
+ "kind": "theme",
+ "ground": "both",
+ "tone": "One sea line carried around the world, from Hokusai's wave to Van Gogh's night, who admired the wave; land rises out of the sea and sinks back into it.",
+ "source": "The library's famous works (src/vj/artSketches.ts)",
+ "license": "public domain works",
+ "episodes": [
+  {
+   "id": "wave",
+   "title": "The Great Wave off Kanagawa, c. 1831",
+   "mood": "climax",
+   "scene": "Hokusai's wave towers over the boats, Fuji small behind.",
+   "keyImage": "The wave curling over the sea line.",
+   "cast": [
+    "wave"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "fuji",
+   "title": "Fine Wind, Clear Morning, c. 1831",
+   "mood": "quiet",
+   "scene": "The same mountain, alone in the morning.",
+   "keyImage": "Fuji rising from a low shore.",
+   "cast": [
+    "fuji"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "moai",
+   "title": "The Moai of Ahu Tongariki",
+   "mood": "journey",
+   "scene": "Across the Pacific, a row of stone figures turns its back to the sea.",
+   "keyImage": "The row of moai on their platform.",
+   "cast": [
+    "moai"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "liberty",
+   "title": "Liberty Enlightening the World, 1886",
+   "mood": "busy",
+   "scene": "A harbour, a raised torch, a welcome from the sea.",
+   "keyImage": "Liberty on her island.",
+   "cast": [
+    "liberty"
+   ],
+   "props": [],
+   "setting": []
+  },
+  {
+   "id": "starry",
+   "title": "The Starry Night, 1889",
+   "mood": "climax",
+   "scene": "Van Gogh, who wrote of Hokusai's wave, paints the sky in swirls.",
+   "keyImage": "The cypress, the swirling sky, the village below.",
+   "cast": [
+    "starry"
+   ],
+   "props": [],
+   "setting": []
+  }
+ ]
+}
