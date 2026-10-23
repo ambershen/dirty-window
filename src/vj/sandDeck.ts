@@ -174,20 +174,22 @@ export class SandDeck {
     if (!this.scrollNow) { this.scrollNow = SCROLLS.find(s => s.id === this.theme) ?? SCROLLS[Math.floor(Math.random() * SCROLLS.length)]; this.sceneAt = -1 }
     let scroll = this.scrollNow, n = scroll.scenes.length, i = this.sceneAt + 1
     // Never the same scene twice running: the search starts after it and stops before coming back to it.
-    if (mood) for (let k = 1; k < n; k++) { const j = (this.sceneAt + k) % n; if (scroll.scenes[j].mood === mood) { i = j; break } }
+    // Playing every theme in turn, it only looks ahead, so the music never holds the deck in one theme.
+    const all = this.theme === 'all' || !SCROLLS.some(s => s.id === this.theme)
+    if (mood) for (let k = 1; k < n; k++) { const j = this.sceneAt + k; if (all && j >= n) break; if (scroll.scenes[j % n].mood === mood) { i = j % n; break } }
     if (i >= n) {
       // The end of the scroll: the next one (for 'all'), or this one again.
-      if (this.theme === 'all' || !SCROLLS.some(s => s.id === this.theme)) scroll = this.scrollNow = SCROLLS[(SCROLLS.indexOf(scroll) + 1) % SCROLLS.length]
+      if (all) scroll = this.scrollNow = SCROLLS[(SCROLLS.indexOf(scroll) + 1) % SCROLLS.length]
       i = 0
     }
     this.sceneAt = i
     const scene = scroll.scenes[i], strokes = sceneStrokes(scene), W = this.width, H = this.height
-    // A scene is 200 × 100: about two thirds of the screen wide, which the sand travels in a phrase,
-    // so scene after scene meets end to end; it stands on the bottom of the sand.
-    const size = Math.min(W / 3, H * .9), hw = size, hh = size / 2
+    // A scene is 200 × 100, as large as the screen allows (most of its height, under its width),
+    // scene after scene meeting end to end; it stands a little above the middle of the sand.
+    const size = Math.min(W * .45, H * .84), hw = size, hh = size / 2
     const p0 = this.picture, queued = p0?.scene && !p0.stroke && !p0.at
     const x = p0?.scene ? (queued ? p0.x : p0.x + p0.hw + hw) : W - 8 - hw
-    this.picture = { name: `${scene.caption ?? scene.episode} · ${scroll.title ?? scroll.id}`, cx: 100, cy: 50, hw, hh, strokes, hands: strokes.map(() => ({ dx: rand(.25), dy: rand(.25), turn: rand(.004), scale: 1 + rand(.004), phase: Math.random() * 100 })), length: strokes.reduce((sum, s) => sum + s.length * 1.2, 0), x, y: H * .98 - hh, size, tilt: 0, stroke: 0, at: 0, scene: true }
+    this.picture = { name: `${scene.caption ?? scene.episode} · ${scroll.title ?? scroll.id}`, cx: 100, cy: 50, hw, hh, strokes, hands: strokes.map(() => ({ dx: rand(.25), dy: rand(.25), turn: rand(.004), scale: 1 + rand(.004), phase: Math.random() * 100 })), length: strokes.reduce((sum, s) => sum + s.length * 1.2, 0), x, y: H * .48, size, tilt: 0, stroke: 0, at: 0, scene: true }
     this.build = null; this.sweeps = []; this.boldPending = false; this.finger.down = false
     this.blowFrom = this.blowUntil = performance.now()
   }
